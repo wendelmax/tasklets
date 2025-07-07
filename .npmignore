@@ -1,0 +1,70 @@
+# Source code (not needed in package)
+src/
+examples/
+benchmarks/
+test/
+docs/
+
+# Build artifacts
+build/
+*.node
+*.so
+*.dylib
+*.dll
+
+# Development files
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# Configuration files
+binding.gyp
+tsconfig.json
+jest.config.js
+.eslintrc*
+.prettierrc*
+
+# Scripts (keep only essential ones)
+scripts/install.sh
+scripts/test-build.js
+
+# Documentation (keep only README and LICENSE)
+docs/
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Package manager files
+yarn.lock
+pnpm-lock.yaml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini 
