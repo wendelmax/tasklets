@@ -97,6 +97,13 @@ Napi::Value has_tasklet_error(const Napi::CallbackInfo& info);
  */
 Napi::Value get_tasklet_error(const Napi::CallbackInfo& info);
 
+/**
+ * @brief Checks if a tasklet has finished execution
+ * @param info N-API callback info containing tasklet ID
+ * @return Boolean indicating if the tasklet is finished
+ */
+Napi::Value is_tasklet_finished(const Napi::CallbackInfo& info);
+
 // =====================================================================
 // Statistics and Monitoring
 // =====================================================================

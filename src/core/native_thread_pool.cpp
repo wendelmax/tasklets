@@ -142,6 +142,11 @@ uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
     auto result_holder = std::make_shared<std::string>();
     auto error_holder = std::make_shared<std::string>();
     auto has_error_holder = std::make_shared<bool>(false);
+    auto completed_holder = std::make_shared<bool>(false);
+    auto completion_mutex = std::make_shared<std::mutex>();
+    auto completion_cv = std::make_shared<std::condition_variable>();
+    
+    Logger::debug("NativeThreadPool", "Creating ThreadSafeFunction for JS task");
     
     // Create a ThreadSafeFunction for calling JS from worker thread
     auto tsfn = Napi::ThreadSafeFunction::New(
@@ -152,23 +157,33 @@ uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
         1  // initial thread count
     );
     
-    auto task = [tsfn, result_holder, error_holder, has_error_holder]() {
+    auto task = [tsfn, result_holder, error_holder, has_error_holder, completed_holder, completion_mutex, completion_cv]() {
+        Logger::debug("NativeThreadPool", "Starting JS task execution");
+        
         // Call JavaScript function from worker thread and capture result
-        auto status = tsfn.BlockingCall([result_holder, error_holder, has_error_holder](Napi::Env env, Napi::Function jsCallback) {
+        auto status = tsfn.BlockingCall([result_holder, error_holder, has_error_holder, completed_holder, completion_mutex, completion_cv](Napi::Env env, Napi::Function jsCallback) {
+            Logger::debug("NativeThreadPool", "Inside ThreadSafeFunction callback - about to call JS function");
+            
             try {
                 Napi::Value result = jsCallback.Call({});
+                
+                Logger::debug("NativeThreadPool", "JS function returned successfully - processing result type");
                 
                 // Convert the result to string based on its type
                 if (result.IsUndefined() || result.IsNull()) {
                     *result_holder = "";
+                    Logger::debug("NativeThreadPool", "Result is null/undefined - set empty string");
                 } else if (result.IsString()) {
                     *result_holder = result.As<Napi::String>().Utf8Value();
+                    Logger::debug("NativeThreadPool", "Result is string: " + *result_holder);
                 } else if (result.IsNumber()) {
                     double num = result.As<Napi::Number>().DoubleValue();
                     *result_holder = std::to_string(num);
+                    Logger::debug("NativeThreadPool", "Result is number: " + *result_holder);
                 } else if (result.IsBoolean()) {
                     bool val = result.As<Napi::Boolean>().Value();
                     *result_holder = val ? "true" : "false";
+                    Logger::debug("NativeThreadPool", "Result is boolean: " + *result_holder);
                 } else if (result.IsObject()) {
                     // Try to stringify objects
                     Napi::Object global = env.Global();
@@ -176,13 +191,16 @@ uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
                     Napi::Function stringify = json.Get("stringify").As<Napi::Function>();
                     Napi::Value stringified = stringify.Call(json, { result });
                     *result_holder = stringified.As<Napi::String>().Utf8Value();
+                    Logger::debug("NativeThreadPool", "Result is object: " + *result_holder);
                 } else {
                     // Fallback: convert to string
                     Napi::Value str_result = result.ToString();
                     *result_holder = str_result.As<Napi::String>().Utf8Value();
+                    Logger::debug("NativeThreadPool", "Result fallback to string: " + *result_holder);
                 }
                 
                 *has_error_holder = false;
+                Logger::debug("NativeThreadPool", "Final result stored in holder: " + *result_holder);
                 
             } catch (const Napi::Error& e) {
                 *error_holder = e.Message();
@@ -193,15 +211,38 @@ uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
                 *has_error_holder = true;
                 Logger::error("NativeThreadPool", std::string("JS function error: ") + e.what());
             }
+            
+            // Signal that the JS function has completed
+            {
+                std::lock_guard<std::mutex> lock(*completion_mutex);
+                *completed_holder = true;
+            }
+            completion_cv->notify_one();
         });
+        
+        Logger::debug("NativeThreadPool", "ThreadSafeFunction BlockingCall completed with status: " + std::to_string(status));
         
         if (status != napi_ok) {
             *error_holder = "Failed to call JS function from worker thread";
             *has_error_holder = true;
             Logger::error("NativeThreadPool", "Failed to call JS function from worker thread");
+            
+            // Signal completion even on error
+            {
+                std::lock_guard<std::mutex> lock(*completion_mutex);
+                *completed_holder = true;
+            }
+            completion_cv->notify_one();
+        } else {
+            // Wait for the JavaScript function to actually complete
+            std::unique_lock<std::mutex> lock(*completion_mutex);
+            completion_cv->wait(lock, [&]() { return *completed_holder; });
+            Logger::debug("NativeThreadPool", "JS function execution confirmed complete - proceeding");
         }
         
+        Logger::debug("NativeThreadPool", "Before tsfn.Release() - result_holder contains: " + *result_holder);
         tsfn.Release();
+        Logger::debug("NativeThreadPool", "After tsfn.Release() - task lambda completed");
     };
     
     // Create the microjob with a custom work callback that uses the captured result
@@ -220,14 +261,22 @@ uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
     job->tasklet_id = tasklet_id;
     job->thread_pool = this;
     job->task = [task, result_holder, error_holder, has_error_holder, job]() {
-        // Execute the JavaScript task
+        Logger::debug("NativeThreadPool", "Starting MicroJob task execution");
+        
+        // Execute the JavaScript task (this will block until JS function completes)
         task();
         
-        // Set the result or error based on what happened
+        Logger::debug("NativeThreadPool", "JS task completed - checking results");
+        Logger::debug("NativeThreadPool", "result_holder contains: " + *result_holder);
+        Logger::debug("NativeThreadPool", "has_error_holder: " + std::string(*has_error_holder ? "true" : "false"));
+        
+        // Now the result/error should be properly set in the shared pointers
         if (*has_error_holder) {
             job->set_error(*error_holder);
+            Logger::debug("NativeThreadPool", "Set job error: " + *error_holder);
         } else {
             job->set_result(*result_holder);
+            Logger::debug("NativeThreadPool", "Set job result: " + *result_holder);
         }
     };
     
@@ -381,6 +430,14 @@ std::string NativeThreadPool::get_error(uint64_t tasklet_id) {
         throw std::runtime_error("Tasklet not found: " + std::to_string(tasklet_id));
     }
     return tasklet->get_error();
+}
+
+bool NativeThreadPool::is_finished(uint64_t tasklet_id) {
+    auto tasklet = find_tasklet(tasklet_id);
+    if (!tasklet) {
+        throw std::runtime_error("Tasklet not found: " + std::to_string(tasklet_id));
+    }
+    return tasklet->is_finished();
 }
 
 // =====================================================================

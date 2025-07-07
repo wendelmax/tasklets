@@ -46,6 +46,7 @@ Napi::Object InitModule(Napi::Env env, Napi::Object exports) {
     exports.Set("getResult", Napi::Function::New(env, tasklets::napi_wrapper::get_tasklet_result));
     exports.Set("hasError", Napi::Function::New(env, tasklets::napi_wrapper::has_tasklet_error));
     exports.Set("getError", Napi::Function::New(env, tasklets::napi_wrapper::get_tasklet_error));
+    exports.Set("isFinished", Napi::Function::New(env, tasklets::napi_wrapper::is_tasklet_finished));
     
     // Statistics and monitoring functions
     exports.Set("getStats", Napi::Function::New(env, tasklets::napi_wrapper::get_stats));

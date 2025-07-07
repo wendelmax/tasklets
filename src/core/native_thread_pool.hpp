@@ -37,6 +37,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <unordered_map>
 
 // Include our new components
@@ -129,6 +130,13 @@ public:
      * @return The error message
      */
     std::string get_error(uint64_t tasklet_id);
+    
+    /**
+     * @brief Checks if a tasklet has finished execution
+     * @param tasklet_id The tasklet ID
+     * @return true if the tasklet is finished, false otherwise
+     */
+    bool is_finished(uint64_t tasklet_id);
     
     // =====================================================================
     // Statistics and Monitoring

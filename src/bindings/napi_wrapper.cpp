@@ -218,6 +218,37 @@ Napi::Value get_tasklet_error(const Napi::CallbackInfo& info) {
     }
 }
 
+Napi::Value is_tasklet_finished(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        // Validate arguments
+        if (info.Length() < 1) {
+            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        
+        if (!validate_number(env, info[0], "tasklet ID")) {
+            return env.Null();
+        }
+        
+        // Get tasklet ID
+        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
+        
+        // Get thread pool instance
+        auto& thread_pool = get_thread_pool_instance(env);
+        
+        // Check if finished
+        bool finished = thread_pool.is_finished(tasklet_id);
+        
+        return Napi::Boolean::New(env, finished);
+        
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
 // =====================================================================
 // Statistics and Monitoring
 // =====================================================================
