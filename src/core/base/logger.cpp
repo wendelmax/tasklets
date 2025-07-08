@@ -21,16 +21,18 @@
  */
 
 /**
- * @file tasklets_api.cpp
- * @brief Main API implementation for Node.js tasklets module
+ * @file logger.cpp
+ * @brief Implements the Logger class logic, handling thread-safe logging, formatting, and log level management for the tasklets system.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
-#include "napi_wrapper.hpp"
+#include "logger.hpp"
 
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
-    return TaskletsWrapper::Init(env, exports);
-}
+namespace tasklets {
 
-NODE_API_MODULE(tasklets, Init) 
+// Default log level: INFO (shows errors, warnings, and basic information)
+LogLevel Logger::current_level_ = LogLevel::INFO;
+std::mutex Logger::log_mutex_;
+
+} // namespace tasklets 

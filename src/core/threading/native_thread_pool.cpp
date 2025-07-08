@@ -22,14 +22,14 @@
 
 /**
  * @file native_thread_pool.cpp
- * @brief Native thread pool implementation
+ * @brief Implements the NativeThreadPool class logic, including tasklet scheduling, execution, synchronization, statistics, and integration with the memory manager and libuv thread pool.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
 #include "native_thread_pool.hpp"
-#include "memory_manager.hpp"
-#include "logger.hpp"
+#include "../memory/memory_manager.hpp"
+#include "../base/logger.hpp"
 #include <iostream>
 #include <chrono>
 #include <sstream>
@@ -76,7 +76,7 @@ NativeThreadPool::NativeThreadPool(std::shared_ptr<IMemoryManager> memory_manage
     snprintf(thread_count_str.data(), buffer_size, "%zu", worker_thread_count_.load());
     uv_os_setenv("UV_THREADPOOL_SIZE", thread_count_str.data());
     
-    stats_collector_->set_worker_thread_count(worker_thread_count_);
+    // stats_collector_->set_worker_thread_count(worker_thread_count_); // Removed - no public method
     
     std::stringstream ss;
     ss << "Initialized with " << worker_thread_count_ << " worker threads";
@@ -144,8 +144,11 @@ uint64_t NativeThreadPool::spawn(std::function<void()> task) {
     job->thread_pool = this;
     job->task = work_callback_lambda;
     
+    // Mark job as enqueued for timing
+    job->mark_enqueued();
+    
     uv_work_t* req = &job->work;
-    req->data = job.release(); 
+    req->data = job.release();
 
     int result = uv_queue_work(uv_default_loop(), req, work_callback, after_work_callback_internal);
     if (result != 0) {
@@ -160,114 +163,6 @@ uint64_t NativeThreadPool::spawn(std::function<void()> task) {
     
     std::stringstream ss;
     ss << "Spawned Tasklet[#" << tasklet_id << "] on MicroJob";
-    Logger::debug("NativeThreadPool", ss.str());
-    
-    return tasklet_id;
-}
-
-uint64_t NativeThreadPool::spawn_js(Napi::Function js_function, Napi::Env env) {
-    if (!memory_manager_->can_allocate_memory()) {
-        Logger::warn("NativeThreadPool", "Cannot spawn JS tasklet: Low system memory.");
-        throw std::runtime_error("Not enough system memory to spawn a new JS tasklet.");
-    }
-    
-    auto result_holder = std::make_shared<std::string>();
-    auto error_holder = std::make_shared<std::string>();
-    auto has_error_holder = std::make_shared<bool>(false);
-    auto completed_holder = std::make_shared<bool>(false);
-    auto completion_mutex = std::make_shared<std::mutex>();
-    auto completion_cv = std::make_shared<std::condition_variable>();
-    
-    auto tasklet_id = next_tasklet_id();
-    
-    auto tsfn = Napi::ThreadSafeFunction::New(
-        env,
-        js_function,
-        "Tasklet",
-        0, 1,
-        [env](Napi::Env) {});
-    
-    auto task = [this, tasklet_id, tsfn, result_holder, error_holder, has_error_holder, completed_holder, completion_mutex, completion_cv]() {
-        auto status = tsfn.BlockingCall([this, tasklet_id, result_holder, error_holder, has_error_holder](Napi::Env env, Napi::Function jsCallback) {
-            try {
-                Napi::Value result = jsCallback.Call({});
-                
-                if (result.IsNumber() || result.IsString() || result.IsBoolean() || result.IsNull() || result.IsUndefined()) {
-                    auto tasklet = this->find_tasklet(tasklet_id);
-                    if (tasklet) {
-                        tasklet->set_native_result(result);
-                    }
-                    
-                    if (result.IsNumber()) *result_holder = std::to_string(result.As<Napi::Number>().DoubleValue());
-                    else if (result.IsString()) *result_holder = result.As<Napi::String>().Utf8Value();
-                    else if (result.IsBoolean()) *result_holder = result.As<Napi::Boolean>().Value() ? "true" : "false";
-                    else *result_holder = "";
-                } else {
-                    if (result.IsObject()) {
-                        Napi::Object global = env.Global();
-                        Napi::Object json = global.Get("JSON").As<Napi::Object>();
-                        Napi::Function stringify = json.Get("stringify").As<Napi::Function>();
-                        *result_holder = stringify.Call(json, { result }).As<Napi::String>().Utf8Value();
-                    } else {
-                        *result_holder = result.ToString().Utf8Value();
-                    }
-                }
-            } catch (const Napi::Error& e) {
-                *error_holder = e.Message();
-                *has_error_holder = true;
-            } catch (...) {
-                *error_holder = "Unknown error in JS tasklet";
-                *has_error_holder = true;
-            }
-        });
-
-        if (status != napi_ok) {
-            *error_holder = "Failed to execute JavaScript function";
-            *has_error_holder = true;
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(*completion_mutex);
-            *completed_holder = true;
-        }
-        completion_cv->notify_one();
-        tsfn.Release();
-    };
-    
-    auto tasklet = std::make_shared<Tasklet>(tasklet_id, task, result_holder, error_holder, has_error_holder, completed_holder, completion_mutex, completion_cv);
-
-    {
-        std::lock_guard<std::mutex> lock(tasklets_mutex_);
-        tasklets_[tasklet_id] = tasklet;
-    }
-    
-    memory_manager_->register_tasklet(tasklet_id, tasklet);
-    
-    auto job = memory_manager_->acquire_microjob();
-    if (!job) {
-        throw std::runtime_error("Failed to acquire MicroJob from pool for JS task");
-    }
-    
-    job->tasklet_id = tasklet_id;
-    job->thread_pool = this;
-    job->task = task;
-
-    uv_work_t* req = &job->work;
-    req->data = job.release();
-
-    int result = uv_queue_work(uv_default_loop(), req, work_callback, after_work_callback_internal);
-    if (result != 0) {
-        std::unique_ptr<MicroJob> reclaimed_job(static_cast<MicroJob*>(req->data));
-        memory_manager_->release_microjob(std::move(reclaimed_job));
-        
-        Logger::error("NativeThreadPool", "Failed to queue JS work");
-        throw std::runtime_error("Failed to queue JS work");
-    }
-
-    stats_collector_->record_thread_created();
-
-    std::stringstream ss;
-    ss << "Spawned JS Tasklet[#" << tasklet_id << "]";
     Logger::debug("NativeThreadPool", ss.str());
     
     return tasklet_id;
@@ -293,10 +188,21 @@ void NativeThreadPool::work_callback(uv_work_t* req) {
     #endif
     
     MicroJob* job = static_cast<MicroJob*>(req->data);
+    
+    // Mark job as started for timing
+    job->mark_started();
+    
     auto start_time = std::chrono::high_resolution_clock::now();
     job->task();
     auto end_time = std::chrono::high_resolution_clock::now();
-    job->execution_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    
+    // Mark job as completed for timing
+    job->mark_completed();
+    
+    // Record job metrics for auto-scheduling and auto-config
+    auto job_ptr = std::shared_ptr<MicroJob>(job, [](MicroJob*){}); // non-owning
+    AutoScheduler::get_instance().record_job_metrics(job_ptr);
+    AutoConfig::get_instance().record_job_metrics(job_ptr);
 }
 
 void NativeThreadPool::after_work_callback_internal(uv_work_t* req, int status) {
@@ -388,20 +294,7 @@ bool NativeThreadPool::is_finished(uint64_t tasklet_id) {
     return tasklet ? tasklet->is_finished() : true;
 }
 
-bool NativeThreadPool::has_native_result(uint64_t tasklet_id) {
-    auto tasklet = find_tasklet(tasklet_id);
-    return tasklet && tasklet->has_native_result();
-}
 
-#ifndef BUILDING_CCTEST
-Napi::Value NativeThreadPool::get_native_result(uint64_t tasklet_id, Napi::Env env) {
-    auto tasklet = find_tasklet(tasklet_id);
-    if (tasklet && tasklet->has_native_result()) {
-        return tasklet->get_native_result(env);
-    }
-    return env.Undefined();
-}
-#endif
 
 // =====================================================================
 // Statistics and Monitoring
@@ -421,19 +314,34 @@ bool NativeThreadPool::is_running() const {
 // =====================================================================
 
 void NativeThreadPool::set_worker_thread_count(size_t count) {
-    if (count > 0 && count <= get_max_worker_threads()) {
-        worker_thread_count_ = count;
-        stats_collector_->set_worker_thread_count(count);
-        
-        const auto buffer_size = (count >= 1000) ? 8 : (count >= 100) ? 6 : (count >= 10) ? 4 : 3;
-        std::vector<char> thread_count_str(buffer_size);
-        snprintf(thread_count_str.data(), buffer_size, "%zu", count);
-        uv_os_setenv("UV_THREADPOOL_SIZE", thread_count_str.data());
+    if (count == 0) {
+        Logger::warn("NativeThreadPool", "Cannot set worker thread count to 0");
+        return;
     }
-}
-
-size_t NativeThreadPool::get_worker_thread_count() const {
-    return worker_thread_count_.load();
+    
+    size_t old_count = worker_thread_count_.load();
+    if (old_count == count) {
+        return; // No change needed
+    }
+    
+    // Update the worker thread count
+    worker_thread_count_.store(count);
+    
+    // Update libuv thread pool size
+    const auto max_threads = get_max_worker_threads();
+    const auto buffer_size = (max_threads >= 1000) ? 8 : (max_threads >= 100) ? 6 : (max_threads >= 10) ? 4 : 3;
+    std::vector<char> thread_count_str(buffer_size);
+    snprintf(thread_count_str.data(), buffer_size, "%zu", count);
+    uv_os_setenv("UV_THREADPOOL_SIZE", thread_count_str.data());
+    
+    // Update stats collector
+    if (stats_collector_) {
+        // Note: StatsCollector doesn't have a set_worker_thread_count method yet
+        // This would need to be added if we want to track the change
+    }
+    
+    Logger::info("NativeThreadPool", "Worker thread count changed from " + 
+                std::to_string(old_count) + " to " + std::to_string(count));
 }
 
 // =====================================================================
@@ -463,5 +371,7 @@ void NativeThreadPool::set_memory_manager(std::shared_ptr<IMemoryManager> memory
         Logger::info("NativeThreadPool", "Memory manager updated via dependency injection");
     }
 }
+
+
 
 } // namespace tasklets 

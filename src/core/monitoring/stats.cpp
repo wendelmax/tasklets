@@ -22,7 +22,7 @@
 
 /**
  * @file stats.cpp
- * @brief Statistics collection system implementation
+ * @brief Implements the StatsCollector class and statistics logic for collecting and reporting thread pool and tasklet execution metrics.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
@@ -68,9 +68,7 @@ void StatsCollector::update_active_threads(size_t count) {
     active_threads_.store(count);
 }
 
-void StatsCollector::set_worker_thread_count(size_t count) {
-    worker_thread_count_.store(count);
-}
+
 
 SchedulerStats StatsCollector::get_stats() const {
     std::lock_guard<std::mutex> lock(stats_mutex_);

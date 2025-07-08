@@ -22,7 +22,7 @@
 
 /**
  * @file logger.hpp
- * @brief Logger class definition for the Tasklets library
+ * @brief Declares the Logger class, providing thread-safe logging utilities with multiple log levels for the tasklets system.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */

@@ -22,7 +22,7 @@
 
 /**
  * @file stats.hpp
- * @brief Statistics collection and monitoring system
+ * @brief Declares statistics structures and the StatsCollector class for tracking thread pool and tasklet execution metrics.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
@@ -207,11 +207,7 @@ public:
      */
     void update_active_threads(size_t count);
     
-    /**
-     * @brief Sets the number of worker threads
-     * @param count The number of worker threads
-     */
-    void set_worker_thread_count(size_t count);
+
     
     // =====================================================================
     // Statistics Retrieval

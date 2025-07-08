@@ -22,14 +22,13 @@
 
 /**
  * @file native_thread_pool.hpp
- * @brief Native thread pool using libuv for tasklet execution
+ * @brief Declares the NativeThreadPool class, which manages the scheduling, execution, and synchronization of tasklets using a libuv-based thread pool, supporting dependency injection and statistics.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
 #pragma once
 
-#include <napi.h>
 #include <uv.h>
 #include <memory>
 #include <functional>
@@ -40,12 +39,15 @@
 #include <condition_variable>
 #include <unordered_map>
 
-#include "tasklet.hpp"
-#include "microjob.hpp"
-#include "stats.hpp"
-#include "memory_manager.hpp"
+#include "../base/tasklet.hpp"
+#include "../base/microjob.hpp"
+#include "../monitoring/stats.hpp"
+#include "../automation/auto_scheduler.hpp"
 
 namespace tasklets {
+
+// Forward declarations
+class IMemoryManager;
 
 class NativeThreadPool {
 public:
@@ -53,7 +55,7 @@ public:
      * @brief Constructor with dependency injection
      * @param memory_manager Memory manager instance (can be nullptr for singleton)
      */
-    explicit NativeThreadPool(std::shared_ptr<IMemoryManager> memory_manager = nullptr);
+    explicit NativeThreadPool(std::shared_ptr<IMemoryManager> memory_manager = std::shared_ptr<IMemoryManager>());
     ~NativeThreadPool();
     
     NativeThreadPool(const NativeThreadPool&) = delete;
@@ -63,7 +65,6 @@ public:
     
     // Tasklet Management
     uint64_t spawn(std::function<void()> task);
-    uint64_t spawn_js(Napi::Function js_function, Napi::Env env);
     
     // Synchronization
     void join(uint64_t tasklet_id);
@@ -74,20 +75,15 @@ public:
     bool has_error(uint64_t tasklet_id);
     std::string get_error(uint64_t tasklet_id);
     bool is_finished(uint64_t tasklet_id);
-    bool has_native_result(uint64_t tasklet_id);
-    
-    #ifndef BUILDING_CCTEST
-    Napi::Value get_native_result(uint64_t tasklet_id, Napi::Env env);
-    #endif
     
     bool is_running() const;
     
     // Statistics and Monitoring
     SchedulerStats get_stats() const;
     
-    // Configuration
+    // Worker Thread Management
     void set_worker_thread_count(size_t count);
-    size_t get_worker_thread_count() const;
+    size_t get_worker_thread_count() const { return worker_thread_count_.load(); }
     
     // Memory Management Integration
     void initialize_memory_management();
@@ -106,22 +102,22 @@ private:
     static void work_callback(uv_work_t* req);
     static void after_work_callback_internal(uv_work_t* req, int status);
     void after_work_callback(std::unique_ptr<MicroJob> job, int status);
-
-    // Internal Helpers
-    uint64_t next_tasklet_id();
-
-    // Member Variables
-    mutable std::mutex tasklets_mutex_;
-    std::unordered_map<uint64_t, std::shared_ptr<Tasklet>> tasklets_;
     
+    // Internal helpers
+    void cleanup_tasklet(uint64_t tasklet_id);
+    uint64_t next_tasklet_id();
+    
+    // Member variables
+    std::shared_ptr<IMemoryManager> memory_manager_;
     std::atomic<size_t> worker_thread_count_;
     std::unique_ptr<StatsCollector> stats_collector_;
     std::atomic<uint64_t> next_id_;
     
-    // Dependency Injection
-    std::shared_ptr<IMemoryManager> memory_manager_;
+    // Tasklet storage
+    std::unordered_map<uint64_t, std::shared_ptr<Tasklet>> tasklets_;
+    mutable std::mutex tasklets_mutex_;
     
-    // Singleton instance
+    // Singleton
     static std::unique_ptr<NativeThreadPool> instance_;
     static std::mutex instance_mutex_;
 };

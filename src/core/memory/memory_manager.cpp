@@ -22,15 +22,15 @@
  
  /**
  * @file memory_manager.cpp
- * @brief C++ implementation for the memory manager
+ * @brief Implements the MemoryManager logic, including memory pool management, tasklet registration, cleanup, and system memory policy enforcement for the thread pool.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
  
 #include "memory_manager.hpp"
-#include "tasklet.hpp"
-#include "microjob.hpp"
-#include "logger.hpp"
+#include "../base/tasklet.hpp"
+#include "../base/microjob.hpp"
+#include "../base/logger.hpp"
 #include <algorithm>
 #include <sstream>
 #include <fstream>
@@ -123,8 +123,8 @@ MemoryManager& MemoryManager::get_instance() {
 
 MemoryManager::MemoryManager() : 
     is_initialized_(false),
-    cleanup_interval_ms_(SystemConfig::get_instance().get_cleanup_interval_ms()),
-    memory_limit_percent_(SystemConfig::get_instance().get_memory_limit_percent()),
+    cleanup_interval_ms_(5000), // Default cleanup interval
+    memory_limit_percent_(70.0), // Default memory limit
     total_tasklets_created_(0),
     cleanup_operations_count_(0) {
     // Initialization of the object pool can be done here if it doesn't depend on external params
@@ -149,17 +149,16 @@ void MemoryManager::initialize(uv_loop_t* loop) {
     
     Logger::info("MemoryManager", "Initializing Memory Manager with libuv timer");
     
-    // Initialize default values from config
-    cleanup_interval_ms_ = SystemConfig::get_instance().get_cleanup_interval_ms();
+    // Initialize default values
+    cleanup_interval_ms_ = 5000; // Default cleanup interval
     total_tasklets_created_ = 0;
     cleanup_operations_count_ = 0;
     last_cleanup_time_ = std::chrono::steady_clock::now();
     
-    // Initialize object pools from config
-    auto& config = SystemConfig::get_instance();
+    // Initialize object pools with default values
     microjob_pool_ = std::make_unique<ObjectPool<MicroJob>>(
-        config.get_microjob_pool_initial_size(),
-        config.get_microjob_pool_max_size()
+        20, // Default initial size
+        200  // Default max size
     );
     
     // Initialize and start the libuv timer
@@ -227,10 +226,9 @@ void MemoryManager::unregister_tasklet(uint64_t tasklet_id) {
 
 std::unique_ptr<MicroJob> MemoryManager::acquire_microjob() {
     if (!microjob_pool_) {
-        auto& config = SystemConfig::get_instance();
         microjob_pool_ = std::make_unique<ObjectPool<MicroJob>>(
-            config.get_microjob_pool_initial_size(),
-            config.get_microjob_pool_max_size()
+            20, // Default initial size
+            200  // Default max size
         );
     }
     return microjob_pool_->acquire();
@@ -277,13 +275,7 @@ MemoryStats MemoryManager::get_memory_stats() const {
     };
 }
 
-void MemoryManager::set_cleanup_interval(uint32_t interval_ms) {
-    if (interval_ms > 0) {
-        cleanup_interval_ms_.store(interval_ms);
-        // We might want to restart the timer to apply the new interval immediately
-        Logger::info("MemoryManager", "Set cleanup interval to " + std::to_string(interval_ms) + " ms");
-    }
-}
+
 
 void MemoryManager::perform_cleanup() {
     std::vector<uint64_t> to_cleanup;
@@ -363,14 +355,7 @@ bool MemoryManager::can_allocate_memory() {
     return true; // Allow allocation on non-Linux systems or if parsing fails
 }
 
-void MemoryManager::set_memory_limit_percent(double limit_percent) {
-    if (limit_percent >= 0.0 && limit_percent <= 100.0) {
-        memory_limit_percent_.store(limit_percent);
-        Logger::info("MemoryManager", "Set memory limit to " + std::to_string(limit_percent) + "%");
-    } else {
-        Logger::warn("MemoryManager", "Invalid memory limit percentage: " + std::to_string(limit_percent) + ". Must be between 0 and 100.");
-    }
-}
+
 
 MemoryStats MemoryManager::get_system_memory_stats() const {
     MemoryStats stats = get_memory_stats();

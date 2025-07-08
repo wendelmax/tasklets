@@ -28,7 +28,7 @@
  */
 
 #include "cctest.h"
-#include "../../src/core/native_thread_pool.hpp"
+#include "../../src/core/threading/native_thread_pool.hpp"
 #include <thread>
 #include <chrono>
 #include <atomic>

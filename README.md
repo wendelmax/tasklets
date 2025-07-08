@@ -27,6 +27,8 @@ A **breakthrough implementation** of lightweight cooperative tasklets for Node.j
 - **Exceptional Performance**: Native C++ implementation with libuv thread pool
 - **True Parallelism**: Real parallel execution across multiple worker threads
 - **Smart System Adaptation**: Automatically detects and adapts to your hardware capabilities
+- **Automated Adaptive Configuration**: Intelligent runtime optimization based on performance metrics
+- **Intelligent Auto-Scheduler**: Automatic MicroJob and NativeThreadPool optimization
 - **Promise-Native**: Built for modern JavaScript patterns
 - **TypeScript First**: Complete type definitions included
 - **Production Ready**: Comprehensive error handling and monitoring
@@ -241,6 +243,7 @@ Our **high-performance tasklets system** focuses on maximum efficiency and ease 
 - **🎯 Smart defaults** - Works out of the box with automatic thread pool sizing
 - **📊 Built-in monitoring** - Real-time statistics and health monitoring
 - **🔧 Configurable behavior** - Fine-tune performance for your specific needs
+- **🤖 Automated adaptation** - Intelligent runtime optimization based on performance metrics
 
 ## **Performance & Use Cases**
 
@@ -346,6 +349,87 @@ async function fetchWithRetry(url) {
 }
 ```
 
+### Automated Adaptive Configuration
+
+```javascript
+const tasklets = require('tasklets');
+
+// Enable intelligent adaptive optimization
+tasklets.enableAdaptiveMode();
+
+// Set workload type for better optimization
+tasklets.setWorkloadType('cpu-intensive');
+
+// Run tasks - system automatically optimizes settings
+const results = await tasklets.runAll([
+    () => heavyComputation(),
+    () => dataProcessing(),
+    () => fileOperations()
+]);
+
+// Check adaptive metrics
+const metrics = tasklets.getAdaptiveMetrics();
+const lastAdjustment = tasklets.getLastAdjustment();
+
+console.log('Performance metrics:', metrics);
+console.log('Last optimization:', lastAdjustment);
+```
+
+The adaptive system automatically:
+- **Scales worker threads** based on CPU utilization
+- **Adjusts memory limits** based on memory pressure
+- **Optimizes batch sizes** for maximum throughput
+- **Monitors performance** and makes intelligent adjustments
+- **Adapts to workload changes** in real-time
+
+### Intelligent Auto-Scheduler
+
+```javascript
+const tasklets = require('tasklets');
+
+// Enable intelligent auto-scheduling
+tasklets.enableAutoScheduling();
+
+// Run different workload types - auto-scheduler detects patterns
+await tasklets.runAll([
+    // CPU-intensive tasks
+    () => heavyComputation(),
+    () => mathematicalProcessing(),
+    
+    // I/O-intensive tasks
+    () => fileOperations(),
+    () => networkRequests(),
+    
+    // Memory-intensive tasks
+    () => largeDataProcessing(),
+    () => imageProcessing()
+]);
+
+// Get auto-scheduling recommendations
+const recommendations = tasklets.getAutoSchedulingRecommendations();
+console.log('Worker scaling:', recommendations.should_scale_up ? 'Scale UP' : 'Maintain');
+console.log('Recommended workers:', recommendations.recommended_worker_count);
+console.log('Confidence:', (recommendations.worker_scaling_confidence * 100).toFixed(1) + '%');
+
+// Apply recommendations automatically
+tasklets.applyAutoSchedulingRecommendations();
+
+// Monitor performance patterns
+const metricsHistory = tasklets.getAutoSchedulingMetricsHistory();
+const patterns = metricsHistory.map(m => m.detected_pattern);
+console.log('Detected patterns:', patterns);
+```
+
+The auto-scheduler intelligently:
+- **Detects workload patterns** (CPU-intensive, I/O-intensive, Memory-intensive, Burst, Steady, Mixed)
+- **Estimates job complexity** (Trivial, Simple, Moderate, Complex, Heavy)
+- **Scales worker threads** based on utilization and patterns
+- **Adjusts timeouts** based on job complexity and failure rates
+- **Recommends priorities** based on workload characteristics
+- **Suggests batching strategies** for optimal throughput
+- **Optimizes load balancing** across workers
+- **Provides confidence scores** for all recommendations
+
 ## Recent Improvements
 
 ### Version 1.0.0 Highlights
@@ -387,6 +471,7 @@ const result = await tasklets.run(() => heavyWork());
 - [Getting Started](docs/getting-started.md) - Step-by-step tutorial
 - [Examples](docs/examples.md) - Real-world usage examples
 - [Performance Guide](docs/performance-guide.md) - Optimization tips
+- [Adaptive Configuration](docs/adaptive-configuration.md) - Automated optimization system
 - [Best Practices](docs/best-practices.md) - Recommended patterns
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 

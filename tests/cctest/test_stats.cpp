@@ -28,7 +28,7 @@
  */
 
 #include "cctest.h"
-#include "../../src/core/stats.hpp"
+#include "../../src/core/monitoring/stats.hpp"
 #include <thread>
 #include <vector>
 #include <atomic>

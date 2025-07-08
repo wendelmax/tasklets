@@ -22,7 +22,7 @@
 
 /**
  * @file memory_manager.hpp
- * @brief C++ header for the memory manager
+ * @brief Declares the MemoryManager class and IMemoryManager interface, responsible for memory pool management, tasklet lifecycle, and system memory policy for the thread pool.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
@@ -37,7 +37,7 @@
 #include <vector>
 #include <atomic>
 #include <uv.h> // Include libuv header
-#include "config.hpp"
+#include "../automation/auto_config.hpp"
 
 namespace tasklets {
 
@@ -126,8 +126,7 @@ public:
     virtual void force_cleanup() = 0;
     virtual bool can_allocate_memory() = 0;
     virtual bool is_memory_usage_acceptable() const = 0;
-    virtual void set_memory_limit_percent(double limit_percent) = 0;
-    virtual void set_cleanup_interval(uint32_t interval_ms) = 0;
+
     virtual MemoryStats get_memory_stats() const = 0;
     virtual MemoryStats get_system_memory_stats() const = 0;
 };
@@ -198,17 +197,7 @@ public:
     
     MemoryStats get_memory_stats() const override;
     
-    /**
-     * @brief Sets the automatic cleanup interval.
-     * @param interval_ms The interval in milliseconds.
-     */
-    void set_cleanup_interval(uint32_t interval_ms) override;
-    
-    /**
-     * @brief Sets the memory usage limit percentage.
-     * @param limit_percent The limit as a percentage (0-100).
-     */
-    void set_memory_limit_percent(double limit_percent) override;
+
     
     /**
      * @brief Get system memory information using libuv.

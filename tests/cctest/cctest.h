@@ -266,4 +266,8 @@ public:
     static cctest::TestRegistrar test_##test_name##_registrar(#test_name, test_##test_name); \
     void test_##test_name()
 
+// Manual test registration macro
+#define REGISTER_TEST(test_function) \
+    static cctest::TestRegistrar test_##test_function##_registrar(#test_function, test_function)
+
 } // namespace cctest 

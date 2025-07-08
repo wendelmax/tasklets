@@ -21,18 +21,37 @@
  */
 
 /**
- * @file logger.cpp
- * @brief Logger class implementation for the Tasklets library
+ * @file common_types.hpp
+ * @brief Common types and enums shared across the Tasklets system
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
-#include "logger.hpp"
+#pragma once
 
 namespace tasklets {
 
-// Default log level: INFO (shows errors, warnings, and basic information)
-LogLevel Logger::current_level_ = LogLevel::INFO;
-std::mutex Logger::log_mutex_;
+/**
+ * @brief Workload pattern classification
+ */
+enum class WorkloadPattern {
+    CPU_INTENSIVE,      // CPU-bound tasks
+    IO_INTENSIVE,       // I/O-bound tasks
+    MEMORY_INTENSIVE,   // Memory-bound tasks
+    MIXED,              // Mixed workload
+    BURST,              // Burst workload
+    STEADY              // Steady workload
+};
+
+/**
+ * @brief Job complexity estimation
+ */
+enum class JobComplexity {
+    TRIVIAL,    // < 1ms execution time
+    SIMPLE,     // 1-10ms execution time
+    MODERATE,   // 10-100ms execution time
+    COMPLEX,    // 100ms-1s execution time
+    HEAVY       // > 1s execution time
+};
 
 } // namespace tasklets 

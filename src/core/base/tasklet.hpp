@@ -22,7 +22,7 @@
 
 /**
  * @file tasklet.hpp
- * @brief Tasklet class definition
+ * @brief Declares the Tasklet class, representing a high-level abstraction for a unit of work (tasklet) managed by the thread pool, including result, error, and synchronization logic.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
@@ -37,28 +37,12 @@
 #include <mutex>
 #include <condition_variable>
 
-#ifndef BUILDING_CCTEST
-#include <napi.h>
-#endif
-
 namespace tasklets {
 
 class Tasklet {
 public:
-    // Constructor for C++ tasks
+    // Constructor for all tasks (simplified)
     Tasklet(uint64_t id, std::function<void()> task);
-
-    // Constructor for JS tasks
-    Tasklet(
-        uint64_t id,
-        std::function<void()> task,
-        std::shared_ptr<std::string> result_holder,
-        std::shared_ptr<std::string> error_holder,
-        std::shared_ptr<bool> has_error_holder,
-        std::shared_ptr<bool> completed_holder,
-        std::shared_ptr<std::mutex> completion_mutex,
-        std::shared_ptr<std::condition_variable> completion_cv
-    );
     
     ~Tasklet();
     
@@ -77,13 +61,6 @@ public:
     // Result Management
     void set_result(const std::string& result);
     const std::string& get_result() const;
-    
-    #ifndef BUILDING_CCTEST
-    void set_native_result(const Napi::Value& value);
-    Napi::Value get_native_result(Napi::Env env) const;
-    #endif
-    
-    bool has_native_result() const { return has_native_result_; }
     
     // Error Management
     void set_error(const std::string& error);
@@ -104,24 +81,10 @@ private:
     std::atomic<bool> finished_;
     std::atomic<bool> running_;
     
-    // For C++ tasks and string results from JS tasks
+    // Result and error storage
     std::string result_;
     std::string error_;
     std::atomic<bool> has_error_;
-    
-    // For JS tasks, to sync with the main thread
-    std::shared_ptr<std::string> js_result_holder_;
-    std::shared_ptr<std::string> js_error_holder_;
-    std::shared_ptr<bool> js_has_error_holder_;
-    std::shared_ptr<bool> js_completed_holder_;
-    std::shared_ptr<std::mutex> completion_mutex_;
-    std::shared_ptr<std::condition_variable> completion_cv_;
-    
-    // Native result storage for performance optimization
-    #ifndef BUILDING_CCTEST
-    Napi::Reference<Napi::Value> native_result_ref_;
-    #endif
-    std::atomic<bool> has_native_result_;
 };
 
 } // namespace tasklets 

@@ -21,17 +21,65 @@
  */
 
 /**
- * @file microjob.cpp
- * @brief MicroJob structure implementation
+ * @file tasklet.cpp
+ * @brief Implements the Tasklet class logic, including result and error management, state transitions, and synchronization for tasklet execution in the thread pool.
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
-#include "microjob.hpp"
+#include "tasklet.hpp"
+#include "logger.hpp"
+#include <sstream>
+#include <thread>
 
 namespace tasklets {
 
-// Implementation is mostly inline in the header file
-// This file exists for future expansion and consistency
+Tasklet::Tasklet(uint64_t id, std::function<void()> task)
+    : id_(id),
+      task_(task),
+      finished_(false),
+      running_(false),
+      has_error_(false) {
+}
+
+Tasklet::~Tasklet() = default;
+
+void Tasklet::mark_finished() {
+    finished_ = true;
+    running_ = false;
+    notify_completion();
+}
+
+void Tasklet::set_result(const std::string& result) {
+    result_ = result;
+}
+
+const std::string& Tasklet::get_result() const {
+    return result_;
+}
+
+void Tasklet::set_error(const std::string& error) {
+    error_ = error;
+    has_error_ = true;
+}
+
+const std::string& Tasklet::get_error() const {
+    return error_;
+}
+
+bool Tasklet::has_error() const {
+    return has_error_.load();
+}
+
+void Tasklet::wait_for_completion() {
+    while (!finished_.load()) {
+        std::this_thread::yield();
+    }
+}
+
+void Tasklet::notify_completion() {
+    // This method is called when the tasklet finishes
+    // In the future, this could be used to notify listeners
+}
 
 } // namespace tasklets 

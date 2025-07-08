@@ -31,6 +31,16 @@
 #include <iostream>
 #include <cstring>
 
+// Include all test files
+#include "test_tasklet.cpp"
+#include "test_microjob.cpp"
+#include "test_native_thread_pool.cpp"
+#include "test_stats.cpp"
+#include "test_logger.cpp"
+#include "test_auto_config.cpp"
+#include "test_memory_manager.cpp"
+#include "test_auto_scheduler.cpp"
+
 void print_usage(const char* program_name) {
     std::cout << "Usage: " << program_name << " [options] [test_name]" << std::endl;
     std::cout << "Options:" << std::endl;

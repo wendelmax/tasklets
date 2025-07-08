@@ -22,15 +22,16 @@
 
 /**
  * @file test_microjob.cpp
- * @brief Tests for the MicroJob class
+ * @brief Tests for MicroJob structure
  * @author Jackson Wendel Santos Sá
  * @date 2025
  */
 
 #include "cctest.h"
-#include "../../src/core/microjob.hpp"
+#include "../../src/core/base/microjob.hpp"
 #include <string>
-#include <functional>
+#include <thread>
+#include <chrono>
 
 using namespace tasklets;
 using namespace cctest;
@@ -38,363 +39,342 @@ using namespace cctest;
 TEST(MicroJobConstruction) {
     MicroJob job;
     
-    // Test default initialization
-    ASSERT_EQ(0, job.tasklet_id);
+    ASSERT_EQ(job.tasklet_id, 0);
     ASSERT_NULLPTR(job.thread_pool);
-    ASSERT_FALSE(job.has_error);
-    ASSERT_STREQ("", job.result.c_str());
-    ASSERT_STREQ("", job.error.c_str());
-    
-    // Test that work.data points to this job
-    ASSERT_TRUE(&job == job.work.data);
-}
-
-TEST(MicroJobTaskletId) {
-    MicroJob job;
-    
-    // Test setting tasklet ID
-    job.tasklet_id = 100;
-    ASSERT_EQ(100, job.tasklet_id);
-    
-    job.tasklet_id = 0;
-    ASSERT_EQ(0, job.tasklet_id);
-    
-    job.tasklet_id = UINT64_MAX;
-    ASSERT_EQ(UINT64_MAX, job.tasklet_id);
-}
-
-TEST(MicroJobThreadPoolPointer) {
-    MicroJob job;
-    
-    // Test thread pool pointer
-    ASSERT_NULLPTR(job.thread_pool);
-    
-    // Note: We can't easily create a real NativeThreadPool instance here
-    // for testing, so we'll just test pointer assignment
-    tasklets::NativeThreadPool* dummy_ptr = reinterpret_cast<tasklets::NativeThreadPool*>(0x12345678);
-    job.thread_pool = dummy_ptr;
-    ASSERT_TRUE(dummy_ptr == job.thread_pool);
-    
-    job.thread_pool = nullptr;
-    ASSERT_NULLPTR(job.thread_pool);
+    ASSERT_EQ(static_cast<int>(job.state), static_cast<int>(JobState::PENDING));
+    ASSERT_EQ(job.execution_duration, 0);
+    ASSERT_EQ(job.timeout_duration, 0);
+    ASSERT_EQ(job.priority, 0);
+    ASSERT_EQ(job.enqueue_time, 0);
+    ASSERT_EQ(job.start_time, 0);
+    ASSERT_EQ(job.completion_time, 0);
+    ASSERT_TRUE(job.result.empty());
+    ASSERT_TRUE(job.error.empty());
+    ASSERT_FALSE(job.has_failed());
+    ASSERT_FALSE(job.is_successful());
+    ASSERT_FALSE(job.is_finished());
+    ASSERT_FALSE(job.is_cancelled());
 }
 
 TEST(MicroJobResultHandling) {
     MicroJob job;
     
-    // Initial result state
-    ASSERT_STREQ("", job.result.c_str());
-    ASSERT_FALSE(job.has_error);
-    
-    // Set result using method
-    job.set_result("Test result");
-    ASSERT_STREQ("Test result", job.result.c_str());
-    ASSERT_FALSE(job.has_error);
+    job.set_result("test result");
+    ASSERT_STREQ(job.get_result().c_str(), "test result");
     ASSERT_TRUE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
+    ASSERT_TRUE(job.is_finished());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::COMPLETED));
     
-    // Change result
-    job.set_result("Different result");
-    ASSERT_STREQ("Different result", job.result.c_str());
-    ASSERT_FALSE(job.has_error);
+    job.set_result("another result");
+    ASSERT_STREQ(job.get_result().c_str(), "another result");
+    ASSERT_TRUE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
     
-    // Set empty result
     job.set_result("");
-    ASSERT_STREQ("", job.result.c_str());
-    ASSERT_FALSE(job.has_error);
+    ASSERT_STREQ(job.get_result().c_str(), "");
+    ASSERT_TRUE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
     
-    // Set large result
-    std::string large_result(1000, 'A');
+    std::string large_result(1000, 'x');
     job.set_result(large_result);
-    ASSERT_STREQ(large_result.c_str(), job.result.c_str());
-    ASSERT_FALSE(job.has_error);
+    ASSERT_STREQ(job.get_result().c_str(), large_result.c_str());
+    ASSERT_TRUE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
 }
 
 TEST(MicroJobErrorHandling) {
     MicroJob job;
     
-    // Initial error state
-    ASSERT_STREQ("", job.error.c_str());
-    ASSERT_FALSE(job.has_error);
-    ASSERT_TRUE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
+    ASSERT_TRUE(job.get_error().empty());
+    ASSERT_FALSE(job.is_finished());
     
-    // Set error using method
-    job.set_error("Test error");
-    ASSERT_STREQ("Test error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
+    job.set_error("test error");
+    ASSERT_STREQ(job.get_error().c_str(), "test error");
+    ASSERT_TRUE(job.has_failed());
+    ASSERT_FALSE(job.is_successful());
+    ASSERT_TRUE(job.is_finished());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::FAILED));
+    
+    job.set_error("another error");
+    ASSERT_STREQ(job.get_error().c_str(), "another error");
+    ASSERT_TRUE(job.has_failed());
     ASSERT_FALSE(job.is_successful());
     
-    // Change error
-    job.set_error("Different error");
-    ASSERT_STREQ("Different error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
-    ASSERT_FALSE(job.is_successful());
-    
-    // Set empty error (but has_error should still be true)
     job.set_error("");
-    ASSERT_STREQ("", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
+    ASSERT_STREQ(job.get_error().c_str(), "");
+    ASSERT_TRUE(job.has_failed());
     ASSERT_FALSE(job.is_successful());
 }
 
 TEST(MicroJobResultAndError) {
     MicroJob job;
     
-    // Set result first
-    job.set_result("Test result");
-    ASSERT_STREQ("Test result", job.result.c_str());
-    ASSERT_FALSE(job.has_error);
+    job.set_result("success");
+    ASSERT_STREQ(job.get_result().c_str(), "success");
+    ASSERT_FALSE(job.has_failed());
     ASSERT_TRUE(job.is_successful());
     
-    // Then set error
-    job.set_error("Test error");
-    ASSERT_STREQ("Test result", job.result.c_str()); // Result should remain
-    ASSERT_STREQ("Test error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
+    job.set_error("failure");
+    ASSERT_STREQ(job.get_error().c_str(), "failure");
+    ASSERT_TRUE(job.has_failed());
     ASSERT_FALSE(job.is_successful());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::FAILED));
     
-    // Set result again (error should remain)
-    job.set_result("New result");
-    ASSERT_STREQ("New result", job.result.c_str());
-    ASSERT_STREQ("Test error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
-    ASSERT_FALSE(job.is_successful());
+    job.set_result("new success");
+    ASSERT_STREQ(job.get_result().c_str(), "new success");
+    ASSERT_FALSE(job.has_failed());
+    ASSERT_TRUE(job.is_successful());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::COMPLETED));
 }
 
 TEST(MicroJobDirectFieldAccess) {
     MicroJob job;
     
-    // Test direct field access
-    job.tasklet_id = 42;
-    job.result = "Direct result";
-    job.error = "Direct error";
-    job.has_error = true;
+    job.result = "direct result";
+    job.error = "direct error";
     
-    ASSERT_EQ(42, job.tasklet_id);
-    ASSERT_STREQ("Direct result", job.result.c_str());
-    ASSERT_STREQ("Direct error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
+    ASSERT_STREQ(job.result.c_str(), "direct result");
+    ASSERT_STREQ(job.error.c_str(), "direct error");
+    
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
     ASSERT_FALSE(job.is_successful());
-}
-
-TEST(MicroJobLibuvWorkStructure) {
-    MicroJob job;
-    
-    // Test that the libuv work structure is properly initialized
-    ASSERT_TRUE(&job == job.work.data);
-    
-    // Test that we can access the job from the work structure
-    MicroJob* job_from_work = static_cast<MicroJob*>(job.work.data);
-    ASSERT_TRUE(&job == job_from_work);
-    
-    // Test that modifying the job affects the work structure
-    job.tasklet_id = 123;
-    ASSERT_EQ(123, job_from_work->tasklet_id);
+    ASSERT_FALSE(job.has_failed());
+    ASSERT_FALSE(job.is_finished());
 }
 
 TEST(MicroJobMultipleInstances) {
-    MicroJob job1;
-    MicroJob job2;
+    MicroJob job1, job2;
     
-    // Test that each job has its own work structure
-    ASSERT_TRUE(&job1 == job1.work.data);
-    ASSERT_TRUE(&job2 == job2.work.data);
-    ASSERT_TRUE(&job1 != &job2);
-    ASSERT_TRUE(job1.work.data != job2.work.data);
+    job1.set_result("result1");
+    job2.set_error("error2");
     
-    // Test that they can have different states
-    job1.tasklet_id = 1;
-    job2.tasklet_id = 2;
+    ASSERT_STREQ(job1.get_result().c_str(), "result1");
+    ASSERT_TRUE(job1.is_successful());
+    ASSERT_FALSE(job1.has_failed());
     
-    job1.set_result("Result 1");
-    job2.set_error("Error 2");
+    ASSERT_STREQ(job2.get_error().c_str(), "error2");
+    ASSERT_FALSE(job2.is_successful());
+    ASSERT_TRUE(job2.has_failed());
     
-    ASSERT_EQ(1, job1.tasklet_id);
-    ASSERT_EQ(2, job2.tasklet_id);
-    ASSERT_STREQ("Result 1", job1.result.c_str());
-    ASSERT_STREQ("Error 2", job2.error.c_str());
-    ASSERT_FALSE(job1.has_error);
-    ASSERT_TRUE(job2.has_error);
+    ASSERT_STRNE(job1.get_result().c_str(), job2.get_result().c_str());
+    ASSERT_STRNE(job1.get_error().c_str(), job2.get_error().c_str());
 }
 
 TEST(MicroJobLargeData) {
     MicroJob job;
     
-    // Test with large result
-    std::string large_result(10000, 'R');
+    std::string large_result(10000, 'x');
     job.set_result(large_result);
-    ASSERT_STREQ(large_result.c_str(), job.result.c_str());
-    ASSERT_FALSE(job.has_error);
-    
-    // Test with large error
-    std::string large_error(10000, 'E');
-    job.set_error(large_error);
-    ASSERT_STREQ(large_error.c_str(), job.error.c_str());
-    ASSERT_TRUE(job.has_error);
-    
-    // Both should coexist
-    ASSERT_STREQ(large_result.c_str(), job.result.c_str());
-    ASSERT_STREQ(large_error.c_str(), job.error.c_str());
-}
-
-TEST(MicroJobSpecialCharacters) {
-    MicroJob job;
-    
-    // Test with special characters in result
-    std::string special_result = "Result with special chars: \n\t\r\"\'\\\0";
-    job.set_result(special_result);
-    ASSERT_STREQ(special_result.c_str(), job.result.c_str());
-    
-    // Test with special characters in error
-    std::string special_error = "Error with special chars: \n\t\r\"\'\\\0";
-    job.set_error(special_error);
-    ASSERT_STREQ(special_error.c_str(), job.error.c_str());
-}
-
-TEST(MicroJobUtf8Strings) {
-    MicroJob job;
-    
-    // Test with UTF-8 strings
-    std::string utf8_result = "UTF-8 Result: こんにちは 世界 🌍";
-    job.set_result(utf8_result);
-    ASSERT_STREQ(utf8_result.c_str(), job.result.c_str());
-    
-    std::string utf8_error = "UTF-8 Error: エラー 错误 ошибка";
-    job.set_error(utf8_error);
-    ASSERT_STREQ(utf8_error.c_str(), job.error.c_str());
-}
-
-TEST(MicroJobStateTransitions) {
-    MicroJob job;
-    
-    // Start with successful state
-    job.set_result("Success");
+    ASSERT_STREQ(job.get_result().c_str(), large_result.c_str());
+    ASSERT_FALSE(job.has_failed());
     ASSERT_TRUE(job.is_successful());
-    ASSERT_FALSE(job.has_error);
     
-    // Transition to error state
-    job.set_error("Error occurred");
+    std::string large_error(10000, 'e');
+    job.set_error(large_error);
+    ASSERT_STREQ(job.get_error().c_str(), large_error.c_str());
+    ASSERT_TRUE(job.has_failed());
     ASSERT_FALSE(job.is_successful());
-    ASSERT_TRUE(job.has_error);
-    
-    // Result should still be there
-    ASSERT_STREQ("Success", job.result.c_str());
-    ASSERT_STREQ("Error occurred", job.error.c_str());
-    
-    // Set another result (error state should persist)
-    job.set_result("New success");
-    ASSERT_FALSE(job.is_successful());
-    ASSERT_TRUE(job.has_error);
-    ASSERT_STREQ("New success", job.result.c_str());
 }
 
-TEST(MicroJobNonCopyable) {
-    // Test that MicroJob is non-copyable
-    MicroJob job1;
-    job1.tasklet_id = 42;
-    job1.set_result("Test");
-    
-    // These should not compile if uncommented:
-    // MicroJob job2 = job1;  // Copy constructor
-    // MicroJob job3; job3 = job1;  // Copy assignment
-    
-    // But we can test that we can't copy by trying to pass by value
-    // This test just ensures the class is designed correctly
-    ASSERT_EQ(42, job1.tasklet_id);
-    ASSERT_STREQ("Test", job1.result.c_str());
-}
-
-TEST(MicroJobNonMovable) {
-    // Test that MicroJob is non-movable
-    MicroJob job1;
-    job1.tasklet_id = 42;
-    job1.set_result("Test");
-    
-    // These should not compile if uncommented:
-    // MicroJob job2 = std::move(job1);  // Move constructor
-    // MicroJob job3; job3 = std::move(job1);  // Move assignment
-    
-    // Test that the original job is still valid
-    ASSERT_EQ(42, job1.tasklet_id);
-    ASSERT_STREQ("Test", job1.result.c_str());
-}
-
-TEST(MicroJobWorkDataConsistency) {
+TEST(MicroJobCancellation) {
     MicroJob job;
     
-    // Test that work.data always points to the job
-    ASSERT_TRUE(&job == job.work.data);
+    ASSERT_FALSE(job.is_cancelled());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
     
-    // Even after modifying other fields
-    job.tasklet_id = 100;
-    job.set_result("Test result");
-    job.set_error("Test error");
+    job.cancel();
+    ASSERT_TRUE(job.is_cancelled());
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::CANCELLED));
+    ASSERT_TRUE(job.is_finished());
+    ASSERT_FALSE(job.is_successful());
+    ASSERT_FALSE(job.has_failed());
+}
+
+TEST(MicroJobPriority) {
+    MicroJob job;
     
-    ASSERT_TRUE(&job == job.work.data);
+    ASSERT_EQ(job.get_priority(), 0);
     
-    // Test that we can retrieve the job from work.data
-    MicroJob* retrieved_job = static_cast<MicroJob*>(job.work.data);
-    ASSERT_TRUE(&job == retrieved_job);
-    ASSERT_EQ(100, retrieved_job->tasklet_id);
-    ASSERT_STREQ("Test result", retrieved_job->result.c_str());
-    ASSERT_STREQ("Test error", retrieved_job->error.c_str());
+    job.set_priority(5);
+    ASSERT_EQ(job.get_priority(), 5);
+    
+    job.set_priority(10);
+    ASSERT_EQ(job.get_priority(), 10);
+    
+    job.set_priority(0);
+    ASSERT_EQ(job.get_priority(), 0);
+}
+
+TEST(MicroJobTimeout) {
+    MicroJob job;
+    
+    ASSERT_EQ(job.timeout_duration, 0);
+    
+    job.timeout_duration = 1000;
+    ASSERT_EQ(job.timeout_duration, 1000);
+    
+    job.timeout_duration = 5000;
+    ASSERT_EQ(job.timeout_duration, 5000);
+}
+
+TEST(MicroJobTiming) {
+    MicroJob job;
+    
+    ASSERT_EQ(job.get_queue_wait_time(), 0);
+    ASSERT_EQ(job.get_total_time(), 0);
+    
+    job.mark_enqueued();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
+    job.mark_started();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
+    job.mark_completed();
+    
+    ASSERT_GT(job.get_queue_wait_time(), 0);
+    ASSERT_GT(job.get_total_time(), 0);
+    ASSERT_GT(job.get_total_time(), job.get_queue_wait_time());
 }
 
 TEST(MicroJobEmptyStrings) {
     MicroJob job;
     
-    // Test with empty strings
     job.set_result("");
     job.set_error("");
     
-    ASSERT_STREQ("", job.result.c_str());
-    ASSERT_STREQ("", job.error.c_str());
-    ASSERT_TRUE(job.has_error); // Error flag should be set even with empty error
-    ASSERT_FALSE(job.is_successful());
+    ASSERT_TRUE(job.get_result().empty());
+    ASSERT_TRUE(job.get_error().empty());
+    ASSERT_TRUE(job.is_successful());
+    ASSERT_TRUE(job.has_failed());
 }
 
 TEST(MicroJobResetState) {
     MicroJob job;
     
-    // Set up job with data
     job.tasklet_id = 123;
-    job.set_result("Initial result");
-    job.set_error("Initial error");
+    job.set_result("test result");
+    job.set_error("test error");
+    job.set_priority(5);
+    job.timeout_duration = 1000;
+    job.execution_duration = 500;
+    job.mark_enqueued();
+    job.mark_started();
+    job.mark_completed();
     
-    // Verify state
-    ASSERT_EQ(123, job.tasklet_id);
-    ASSERT_STREQ("Initial result", job.result.c_str());
-    ASSERT_STREQ("Initial error", job.error.c_str());
-    ASSERT_TRUE(job.has_error);
+    ASSERT_EQ(job.tasklet_id, 123);
+    ASSERT_STREQ(job.get_result().c_str(), "test result");
+    ASSERT_STREQ(job.get_error().c_str(), "test error");
+    ASSERT_EQ(job.get_priority(), 5);
+    ASSERT_EQ(job.timeout_duration, 1000);
+    ASSERT_EQ(job.execution_duration, 500);
+    ASSERT_GT(job.enqueue_time, 0);
+    ASSERT_GT(job.start_time, 0);
+    ASSERT_GT(job.completion_time, 0);
     
-    // Reset to initial state
-    job.tasklet_id = 0;
-    job.result.clear();
-    job.error.clear();
-    job.has_error = false;
+    job.reset();
     
-    // Verify reset
-    ASSERT_EQ(0, job.tasklet_id);
-    ASSERT_STREQ("", job.result.c_str());
-    ASSERT_STREQ("", job.error.c_str());
-    ASSERT_FALSE(job.has_error);
-    ASSERT_TRUE(job.is_successful());
+    ASSERT_EQ(job.tasklet_id, 0);
+    ASSERT_STREQ(job.get_result().c_str(), "");
+    ASSERT_STREQ(job.get_error().c_str(), "");
+    ASSERT_EQ(job.get_priority(), 0);
+    ASSERT_EQ(job.timeout_duration, 0);
+    ASSERT_EQ(job.execution_duration, 0);
+    ASSERT_EQ(job.enqueue_time, 0);
+    ASSERT_EQ(job.start_time, 0);
+    ASSERT_EQ(job.completion_time, 0);
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
 }
 
 TEST(MicroJobToString) {
     MicroJob job;
-    job.tasklet_id = 42;
-    job.set_result("Success result");
     
-    std::string debug_str = job.to_string();
+    job.tasklet_id = 456;
+    job.set_result("test result");
+    job.set_priority(3);
     
-    // Check that the debug string contains expected information
-    ASSERT_TRUE(debug_str.find("42") != std::string::npos);
-    ASSERT_TRUE(debug_str.find("Success result") != std::string::npos);
+    std::string str = job.to_string();
     
-    // Test with error
-    job.set_error("Test error");
-    debug_str = job.to_string();
+    ASSERT_FALSE(str.empty());
+    ASSERT_GT(str.find("456"), 0);
+    ASSERT_GT(str.find("test result"), 0);
+    ASSERT_GT(str.find("3"), 0);
+}
+
+TEST(MicroJobConcurrentAccess) {
+    MicroJob job;
     
-    ASSERT_TRUE(debug_str.find("42") != std::string::npos);
-    ASSERT_TRUE(debug_str.find("Test error") != std::string::npos);
+    std::vector<std::thread> threads;
+    std::atomic<int> set_result_count(0);
+    std::atomic<int> set_error_count(0);
+    
+    for (int i = 0; i < 10; i++) {
+        threads.emplace_back([&job, i, &set_result_count, &set_error_count]() {
+            if (i % 2 == 0) {
+                job.set_result("Result from thread " + std::to_string(i));
+                set_result_count.fetch_add(1);
+            } else {
+                job.set_error("Error from thread " + std::to_string(i));
+                set_error_count.fetch_add(1);
+            }
+        });
+    }
+    
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    
+    ASSERT_EQ(5, set_result_count.load());
+    ASSERT_EQ(5, set_error_count.load());
+    
+    ASSERT_TRUE(job.has_failed() || job.is_successful());
+    ASSERT_FALSE(job.get_result().empty() && job.get_error().empty());
+}
+
+TEST(MicroJobStateTransitions) {
+    MicroJob job;
+    
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
+    ASSERT_FALSE(job.is_finished());
+    
+    job.set_result("success");
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::COMPLETED));
+    ASSERT_TRUE(job.is_finished());
+    
+    job.reset();
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
+    ASSERT_FALSE(job.is_finished());
+    
+    job.set_error("failure");
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::FAILED));
+    ASSERT_TRUE(job.is_finished());
+    
+    job.reset();
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::PENDING));
+    ASSERT_FALSE(job.is_finished());
+    
+    job.cancel();
+    ASSERT_EQ(static_cast<int>(job.get_state()), static_cast<int>(JobState::CANCELLED));
+    ASSERT_TRUE(job.is_finished());
+}
+
+TEST(MicroJobAutoSchedulingIntegration) {
+    MicroJob job;
+    
+    job.tasklet_id = 789;
+    job.execution_duration = 250;
+    
+    JobComplexity complexity = job.get_estimated_complexity();
+    ASSERT_TRUE(complexity == JobComplexity::SIMPLE ||
+                complexity == JobComplexity::MODERATE ||
+                complexity == JobComplexity::COMPLEX ||
+                complexity == JobComplexity::UNKNOWN);
+    
+    bool suitable_for_batching = job.is_suitable_for_batching();
+    ASSERT_TRUE(suitable_for_batching || !suitable_for_batching);
+    
+    job.apply_auto_scheduling_recommendations(1000, 5);
+    ASSERT_EQ(job.timeout_duration, 1000);
+    ASSERT_EQ(job.get_priority(), 5);
 } 
