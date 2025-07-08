@@ -40,7 +40,7 @@
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS",
         "TASKLETS_VERSION=\"1.0.0\"",
-        "NODE_GYP_MODULE_NAME"
+        "NODE_GYP_MODULE_NAME=tasklets"
       ],
       "libraries": [
         "-luv",

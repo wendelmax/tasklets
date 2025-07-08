@@ -309,8 +309,6 @@ AutoConfigMetrics AutoConfig::collect_metrics_parallel() {
 }
 
 WorkloadPattern AutoConfig::analyze_workload_pattern_parallel(const AutoConfigMetrics& metrics) {
-    auto& multiprocessor = Multiprocessor::get_instance();
-    
     // Analyze multiple factors in parallel
     auto cpu_analysis = std::async(std::launch::async, [&metrics]() {
         return metrics.cpu_utilization > 80.0;
@@ -342,8 +340,6 @@ WorkloadPattern AutoConfig::analyze_workload_pattern_parallel(const AutoConfigMe
 }
 
 AutoConfigRecommendations AutoConfig::generate_recommendations_parallel(const AutoConfigMetrics& metrics) {
-    auto& multiprocessor = Multiprocessor::get_instance();
-    
     // Generate different types of recommendations in parallel
     auto worker_recommendations = std::async(std::launch::async, [this, &metrics]() {
         return calculate_worker_scaling(metrics);

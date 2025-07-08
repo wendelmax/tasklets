@@ -122,11 +122,12 @@ MemoryManager& MemoryManager::get_instance() {
 }
 
 MemoryManager::MemoryManager() : 
-    is_initialized_(false),
     cleanup_interval_ms_(5000), // Default cleanup interval
     memory_limit_percent_(70.0), // Default memory limit
     total_tasklets_created_(0),
-    cleanup_operations_count_(0) {
+    cleanup_operations_count_(0),
+    last_cleanup_time_(std::chrono::steady_clock::now()),
+    is_initialized_(false) {
     // Initialization of the object pool can be done here if it doesn't depend on external params
 }
 

@@ -38,6 +38,21 @@
  
  #include "../core/core.hpp"
  
+ // Clamp helpers for integer and floating-point types
+#include <type_traits>
+
+template <typename T>
+T clamp_int(T val, T min, T max, T def) {
+    if (val < min || val > max) return def;
+    return val;
+}
+
+template <typename T>
+T clamp_float(T val, T min, T max, T def) {
+    if (std::isnan(val) || val < min || val > max) return def;
+    return val;
+}
+ 
  namespace tasklets {
  
  // =====================================================================
@@ -868,6 +883,141 @@
  }
  
  // =====================================================================
+ // Auto-Scheduling Methods
+ // =====================================================================
+
+Napi::Value EnableAutoScheduling(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        AutoConfig::get_instance().set_auto_config_enabled(true);
+        return Napi::Boolean::New(env, true);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value DisableAutoScheduling(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        AutoConfig::get_instance().set_auto_config_enabled(false);
+        return Napi::Boolean::New(env, true);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value IsAutoSchedulingEnabled(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        bool enabled = AutoConfig::get_instance().is_auto_config_enabled();
+        return Napi::Boolean::New(env, enabled);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value GetAutoSchedulingRecommendations(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        auto recommendations = AutoConfig::get_instance().get_recommendations();
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("recommended_worker_count", clamp_int<size_t>(recommendations.recommended_worker_count, 0, 10000, 1));
+        obj.Set("should_scale_up", recommendations.should_scale_up);
+        obj.Set("should_scale_down", recommendations.should_scale_down);
+        obj.Set("worker_scaling_confidence", clamp_float<double>(recommendations.worker_scaling_confidence, 0.0, 1.0, 0.5));
+        obj.Set("recommended_timeout_ms", clamp_int<long long>(recommendations.recommended_timeout_ms, 0LL, 10000000LL, 1000LL));
+        obj.Set("should_adjust_timeout", recommendations.should_adjust_timeout);
+        obj.Set("timeout_confidence", clamp_float<double>(recommendations.timeout_confidence, 0.0, 1.0, 0.5));
+        obj.Set("recommended_priority", clamp_int<int>(recommendations.recommended_priority, -20, 20, 0));
+        obj.Set("should_adjust_priority", recommendations.should_adjust_priority);
+        obj.Set("priority_confidence", clamp_float<double>(recommendations.priority_confidence, 0.0, 1.0, 0.5));
+        obj.Set("recommended_batch_size", clamp_int<size_t>(recommendations.recommended_batch_size, 0, 10000, 1));
+        obj.Set("should_batch", recommendations.should_batch);
+        obj.Set("batching_confidence", clamp_float<double>(recommendations.batching_confidence, 0.0, 1.0, 0.5));
+        obj.Set("should_rebalance", recommendations.should_rebalance);
+        obj.Set("load_balance_confidence", clamp_float<double>(recommendations.load_balance_confidence, 0.0, 1.0, 0.5));
+        
+        return obj;
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value ApplyAutoSchedulingRecommendations(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        AutoConfig::get_instance().force_analysis();
+        return Napi::Boolean::New(env, true);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value GetAutoSchedulingMetricsHistory(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        auto metrics_history = AutoConfig::get_instance().get_metrics_history();
+        Napi::Array array = Napi::Array::New(env, metrics_history.size());
+        for (size_t i = 0; i < metrics_history.size(); ++i) {
+            const auto& metrics = metrics_history[i];
+            Napi::Object obj = Napi::Object::New(env);
+            obj.Set("cpu_utilization", clamp_float<double>(metrics.cpu_utilization, 0.0, 100.0, 0.0));
+            obj.Set("memory_usage_percent", clamp_float<double>(metrics.memory_usage_percent, 0.0, 100.0, 0.0));
+            obj.Set("worker_utilization", clamp_float<double>(metrics.worker_utilization, 0.0, 100.0, 0.0));
+            obj.Set("throughput_tasks_per_sec", clamp_float<double>(metrics.throughput_tasks_per_sec, 0.0, 1e6, 0.0));
+            obj.Set("average_execution_time_ms", clamp_float<double>(metrics.average_execution_time_ms, 0.0, 1e6, 0.0));
+            obj.Set("success_rate", clamp_float<double>(metrics.success_rate, 0.0, 1.0, 1.0));
+            obj.Set("queue_length", clamp_int<size_t>(metrics.queue_length, 0, 100000, 0));
+            obj.Set("active_jobs", clamp_int<size_t>(metrics.active_jobs, 0, 100000, 0));
+            obj.Set("completed_jobs", clamp_int<size_t>(metrics.completed_jobs, 0, 100000, 0));
+            obj.Set("failed_jobs", clamp_int<size_t>(metrics.failed_jobs, 0, 100000, 0));
+            obj.Set("timestamp", metrics.timestamp);
+            array.Set(i, obj);
+        }
+        
+        return array;
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
+Napi::Value GetAutoSchedulingSettings(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    try {
+        auto settings = AutoConfig::get_instance().get_settings();
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("enabled", settings.is_enabled);
+        obj.Set("strategy", clamp_int<int>(static_cast<int>(settings.strategy), 0, 2, 1));
+        obj.Set("metricsCount", clamp_int<int>(static_cast<int>(settings.metrics_history.size()), 0, 100000, 0));
+        // Add last adjustment info
+        Napi::Object lastAdjustment = Napi::Object::New(env);
+        lastAdjustment.Set("reason", settings.last_adjustment.reason);
+        lastAdjustment.Set("changes_made", settings.last_adjustment.changes_made);
+        lastAdjustment.Set("performance_impact", clamp_float<double>(settings.last_adjustment.performance_impact, -1e6, 1e6, 0.0));
+        lastAdjustment.Set("timestamp", settings.last_adjustment.timestamp);
+        obj.Set("lastAdjustment", lastAdjustment);
+        
+        return obj;
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+ 
+ // =====================================================================
  // Module Initialization
  // =====================================================================
  
@@ -888,6 +1038,13 @@
      exports.Set("batch", Napi::Function::New(env, Batch));
      exports.Set("joinBatch", Napi::Function::New(env, JoinBatch));
      exports.Set("getMemoryStats", Napi::Function::New(env, GetMemoryStats));
+     exports.Set("enableAutoScheduling", Napi::Function::New(env, EnableAutoScheduling));
+     exports.Set("disableAutoScheduling", Napi::Function::New(env, DisableAutoScheduling));
+     exports.Set("isAutoSchedulingEnabled", Napi::Function::New(env, IsAutoSchedulingEnabled));
+     exports.Set("getAutoSchedulingRecommendations", Napi::Function::New(env, GetAutoSchedulingRecommendations));
+     exports.Set("applyAutoSchedulingRecommendations", Napi::Function::New(env, ApplyAutoSchedulingRecommendations));
+     exports.Set("getAutoSchedulingMetricsHistory", Napi::Function::New(env, GetAutoSchedulingMetricsHistory));
+     exports.Set("getAutoSchedulingSettings", Napi::Function::New(env, GetAutoSchedulingSettings));
      
      return exports;
  }

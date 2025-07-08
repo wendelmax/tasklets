@@ -192,9 +192,7 @@ void NativeThreadPool::work_callback(uv_work_t* req) {
     // Mark job as started for timing
     job->mark_started();
     
-    auto start_time = std::chrono::high_resolution_clock::now();
     job->task();
-    auto end_time = std::chrono::high_resolution_clock::now();
     
     // Mark job as completed for timing
     job->mark_completed();
@@ -328,8 +326,8 @@ void NativeThreadPool::set_worker_thread_count(size_t count) {
     worker_thread_count_.store(count);
     
     // Update libuv thread pool size
-    const auto max_threads = get_max_worker_threads();
-    const auto buffer_size = (max_threads >= 1000) ? 8 : (max_threads >= 100) ? 6 : (max_threads >= 10) ? 4 : 3;
+    // Use a larger buffer to accommodate any reasonable thread count (up to 20 digits)
+    const auto buffer_size = 32;
     std::vector<char> thread_count_str(buffer_size);
     snprintf(thread_count_str.data(), buffer_size, "%zu", count);
     uv_os_setenv("UV_THREADPOOL_SIZE", thread_count_str.data());
