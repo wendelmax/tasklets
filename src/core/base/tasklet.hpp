@@ -85,6 +85,10 @@ private:
     std::string result_;
     std::string error_;
     std::atomic<bool> has_error_;
+    
+    // Synchronization
+    mutable std::mutex completion_mutex_;
+    std::condition_variable completion_cv_;
 };
 
 } // namespace tasklets 

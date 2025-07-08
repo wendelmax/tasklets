@@ -366,10 +366,11 @@ TEST(MicroJobAutoSchedulingIntegration) {
     job.execution_duration = 250;
     
     JobComplexity complexity = job.get_estimated_complexity();
-    ASSERT_TRUE(complexity == JobComplexity::SIMPLE ||
+    ASSERT_TRUE(complexity == JobComplexity::TRIVIAL ||
+                complexity == JobComplexity::SIMPLE ||
                 complexity == JobComplexity::MODERATE ||
                 complexity == JobComplexity::COMPLEX ||
-                complexity == JobComplexity::UNKNOWN);
+                complexity == JobComplexity::HEAVY);
     
     bool suitable_for_batching = job.is_suitable_for_batching();
     ASSERT_TRUE(suitable_for_batching || !suitable_for_batching);

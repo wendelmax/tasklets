@@ -35,6 +35,109 @@
 #include <iostream>
 #include <memory>
 #include <chrono>
+#include <sstream>
+#include <type_traits>
+// Include relevant enum headers
+#include "../../src/core/automation/auto_scheduler.hpp"
+#include "../../src/core/base/common_types.hpp"
+
+// String conversion functions for enums
+// Use template specialization, not overloading
+
+template<typename T>
+std::string enum_to_string(T value) {
+    std::ostringstream oss;
+    oss << static_cast<int>(value);
+    return oss.str();
+}
+
+template<>
+inline std::string enum_to_string<tasklets::AutoScheduler::AutoSchedulingStrategy>(tasklets::AutoScheduler::AutoSchedulingStrategy strategy) {
+    switch (strategy) {
+        case tasklets::AutoScheduler::AutoSchedulingStrategy::CONSERVATIVE:
+            return "CONSERVATIVE";
+        case tasklets::AutoScheduler::AutoSchedulingStrategy::MODERATE:
+            return "MODERATE";
+        case tasklets::AutoScheduler::AutoSchedulingStrategy::AGGRESSIVE:
+            return "AGGRESSIVE";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+template<>
+inline std::string enum_to_string<tasklets::WorkloadPattern>(tasklets::WorkloadPattern pattern) {
+    switch (pattern) {
+        case tasklets::WorkloadPattern::CPU_INTENSIVE:
+            return "CPU_INTENSIVE";
+        case tasklets::WorkloadPattern::IO_INTENSIVE:
+            return "IO_INTENSIVE";
+        case tasklets::WorkloadPattern::MEMORY_INTENSIVE:
+            return "MEMORY_INTENSIVE";
+        case tasklets::WorkloadPattern::MIXED:
+            return "MIXED";
+        case tasklets::WorkloadPattern::BURST:
+            return "BURST";
+        case tasklets::WorkloadPattern::STEADY:
+            return "STEADY";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+template<>
+inline std::string enum_to_string<tasklets::JobComplexity>(tasklets::JobComplexity complexity) {
+    switch (complexity) {
+        case tasklets::JobComplexity::TRIVIAL:
+            return "TRIVIAL";
+        case tasklets::JobComplexity::SIMPLE:
+            return "SIMPLE";
+        case tasklets::JobComplexity::MODERATE:
+            return "MODERATE";
+        case tasklets::JobComplexity::COMPLEX:
+            return "COMPLEX";
+        case tasklets::JobComplexity::HEAVY:
+            return "HEAVY";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+// Helper to select correct string conversion
+// Use SFINAE to select enum or non-enum
+// For enums
+
+template<typename T>
+typename std::enable_if<std::is_enum<T>::value, std::string>::type
+safe_to_string(const T& value) {
+    return enum_to_string<T>(value);
+}
+// For nullptr
+inline std::string safe_to_string(std::nullptr_t) {
+    return "<nullptr>";
+}
+// For pointers
+template<typename T>
+std::string safe_to_string(T* ptr) {
+    if (!ptr) return "<nullptr>";
+    std::ostringstream oss;
+    oss << ptr;
+    return oss.str();
+}
+// For types with std::to_string
+// (integral, floating point)
+template<typename T>
+typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type
+safe_to_string(const T& value) {
+    return std::to_string(value);
+}
+// For types that do not match above, fallback
+// (e.g. unique_ptr, shared_ptr, classes)
+template<typename T>
+typename std::enable_if<!std::is_enum<T>::value && !std::is_arithmetic<T>::value && !std::is_pointer<T>::value, std::string>::type
+safe_to_string(const T&) {
+    return "<unprintable type>";
+}
 
 namespace cctest {
 
@@ -184,14 +287,14 @@ public:
 #define ASSERT_EQ(expected, actual) \
     do { \
         if ((expected) != (actual)) { \
-            throw cctest::AssertionError("ASSERT_EQ failed: expected " + std::to_string(expected) + " but got " + std::to_string(actual) + " at " __FILE__ ":" + std::to_string(__LINE__)); \
+            throw cctest::AssertionError("ASSERT_EQ failed: expected " + safe_to_string(expected) + " but got " + safe_to_string(actual) + " at " __FILE__ ":" + std::to_string(__LINE__)); \
         } \
     } while (0)
 
 #define ASSERT_NE(expected, actual) \
     do { \
         if ((expected) == (actual)) { \
-            throw cctest::AssertionError("ASSERT_NE failed: expected " + std::to_string(expected) + " != " + std::to_string(actual) + " at " __FILE__ ":" + std::to_string(__LINE__)); \
+            throw cctest::AssertionError("ASSERT_NE failed: expected " + safe_to_string(expected) + " != " + safe_to_string(actual) + " at " __FILE__ ":" + std::to_string(__LINE__)); \
         } \
     } while (0)
 

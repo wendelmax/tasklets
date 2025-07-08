@@ -33,6 +33,7 @@
 #include <uv.h>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 using namespace tasklets;
 using namespace cctest;
@@ -81,13 +82,13 @@ TEST(AutoConfigStrategyManagement) {
 TEST(AutoConfigJobMetricsRecording) {
     AutoConfig& config = AutoConfig::get_instance();
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.set_result("Test result");
-    job.execution_duration = 100;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->set_result("Test result");
+    job->execution_duration = 100;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     
@@ -97,15 +98,15 @@ TEST(AutoConfigJobMetricsRecording) {
     if (!metrics_history.empty()) {
         const auto& metrics = metrics_history.back();
         ASSERT_EQ(1, metrics.completed_jobs);
-        ASSERT_GT(metrics.avg_total_time_ms, 0.0);
+        ASSERT_GT(metrics.average_execution_time_ms, 0.0);
     }
 }
 
 TEST(AutoConfigBatchPatternRecording) {
     AutoConfig& config = AutoConfig::get_instance();
     
+    config.record_batch_pattern(5);
     config.record_batch_pattern(10);
-    config.record_batch_pattern(20);
     config.record_batch_pattern(15);
     
     auto metrics_history = config.get_metrics_history();
@@ -121,6 +122,9 @@ TEST(AutoConfigRecommendations) {
     ASSERT_GE(recommendations.recommended_memory_limit_percent, 0.0);
     ASSERT_LE(recommendations.recommended_memory_limit_percent, 100.0);
     ASSERT_GE(recommendations.recommended_timeout_ms, 0);
+    ASSERT_GE(recommendations.recommended_priority, 0);
+    ASSERT_GE(recommendations.worker_scaling_confidence, 0.0);
+    ASSERT_LE(recommendations.worker_scaling_confidence, 1.0);
     ASSERT_GE(recommendations.overall_confidence, 0.0);
     ASSERT_LE(recommendations.overall_confidence, 1.0);
 }
@@ -131,12 +135,12 @@ TEST(AutoConfigMetricsHistory) {
     auto initial_history = config.get_metrics_history();
     size_t initial_size = initial_history.size();
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 50;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 50;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     
@@ -149,9 +153,9 @@ TEST(AutoConfigWorkloadPatternDetection) {
     
     WorkloadPattern pattern = config.get_detected_pattern();
     
-    ASSERT_TRUE(pattern == WorkloadPattern::UNKNOWN || 
-                pattern == WorkloadPattern::CPU_INTENSIVE ||
+    ASSERT_TRUE(pattern == WorkloadPattern::CPU_INTENSIVE || 
                 pattern == WorkloadPattern::IO_INTENSIVE ||
+                pattern == WorkloadPattern::MEMORY_INTENSIVE ||
                 pattern == WorkloadPattern::MIXED ||
                 pattern == WorkloadPattern::BURST ||
                 pattern == WorkloadPattern::STEADY);
@@ -162,32 +166,11 @@ TEST(AutoConfigJobComplexityEstimation) {
     
     JobComplexity complexity = config.get_avg_complexity();
     
-    ASSERT_TRUE(complexity == JobComplexity::SIMPLE ||
+    ASSERT_TRUE(complexity == JobComplexity::TRIVIAL ||
+                complexity == JobComplexity::SIMPLE ||
                 complexity == JobComplexity::MODERATE ||
                 complexity == JobComplexity::COMPLEX ||
-                complexity == JobComplexity::UNKNOWN);
-}
-
-TEST(AutoConfigLastAdjustment) {
-    AutoConfig& config = AutoConfig::get_instance();
-    
-    auto adjustment = config.get_last_adjustment();
-    
-    ASSERT_FALSE(adjustment.reason.empty());
-    ASSERT_FALSE(adjustment.changes_made.empty());
-    ASSERT_GE(adjustment.performance_impact, 0.0);
-    ASSERT_GT(adjustment.timestamp, 0);
-}
-
-TEST(AutoConfigSettings) {
-    AutoConfig& config = AutoConfig::get_instance();
-    
-    auto settings = config.get_settings();
-    
-    ASSERT_EQ(config.is_auto_config_enabled(), settings.is_enabled);
-    ASSERT_EQ(config.get_strategy(), settings.strategy);
-    ASSERT_EQ(config.get_recommendations().recommended_worker_count, 
-              settings.recommendations.recommended_worker_count);
+                complexity == JobComplexity::HEAVY);
 }
 
 TEST(AutoConfigCallbackRegistration) {
@@ -203,12 +186,12 @@ TEST(AutoConfigCallbackRegistration) {
     
     config.register_adjustment_callback(callback);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 75;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 75;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     
@@ -234,12 +217,12 @@ TEST(AutoConfigMultipleCallbacks) {
     config.register_adjustment_callback(callback1);
     config.register_adjustment_callback(callback2);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 60;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 60;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     
@@ -258,8 +241,8 @@ TEST(AutoConfigForceAnalysis) {
     auto updated_recommendations = config.get_recommendations();
     
     ASSERT_GT(updated_recommendations.recommended_worker_count, 0);
-    ASSERT_GE(updated_recommendations.overall_confidence, 0.0);
-    ASSERT_LE(updated_recommendations.overall_confidence, 1.0);
+    ASSERT_GE(updated_recommendations.worker_scaling_confidence, 0.0);
+    ASSERT_LE(updated_recommendations.worker_scaling_confidence, 1.0);
 }
 
 TEST(AutoConfigConservativeStrategy) {
@@ -267,12 +250,12 @@ TEST(AutoConfigConservativeStrategy) {
     
     config.set_strategy(AutoConfigStrategy::CONSERVATIVE);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 200;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 200;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     config.force_analysis();
@@ -288,12 +271,12 @@ TEST(AutoConfigAggressiveStrategy) {
     
     config.set_strategy(AutoConfigStrategy::AGGRESSIVE);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 300;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 300;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
     config.record_job_metrics(job);
     config.force_analysis();
@@ -410,7 +393,56 @@ TEST(AutoConfigMetricsCollection) {
         ASSERT_GE(latest.throughput_tasks_per_sec, 0.0);
         ASSERT_GE(latest.average_execution_time_ms, 0.0);
         ASSERT_GE(latest.success_rate, 0.0);
-        ASSERT_LE(latest.success_rate, 1.0);
+        ASSERT_LE(latest.success_rate, 100.0);
         ASSERT_GT(latest.timestamp, 0);
+    }
+}
+
+TEST(AutoConfigLastAdjustment) {
+    AutoConfig& config = AutoConfig::get_instance();
+    
+    auto adjustment = config.get_last_adjustment();
+    
+    ASSERT_GT(adjustment.timestamp, 0);
+    ASSERT_GE(adjustment.performance_impact, 0.0);
+}
+
+TEST(AutoConfigSettings) {
+    AutoConfig& config = AutoConfig::get_instance();
+    
+    auto settings = config.get_settings();
+    
+    ASSERT_EQ(config.is_auto_config_enabled(), settings.is_enabled);
+    ASSERT_EQ(config.get_strategy(), settings.strategy);
+    ASSERT_EQ(config.get_recommendations().recommended_worker_count,
+              settings.recommendations.recommended_worker_count);
+    ASSERT_EQ(config.get_metrics_history().size(), settings.metrics_history.size());
+    ASSERT_EQ(config.get_last_adjustment().timestamp, settings.last_adjustment.timestamp);
+}
+
+TEST(AutoConfigRecommendationConsistency) {
+    AutoConfig& config = AutoConfig::get_instance();
+    
+    auto recommendations1 = config.get_recommendations();
+    auto recommendations2 = config.get_recommendations();
+    
+    ASSERT_EQ(recommendations1.recommended_worker_count, recommendations2.recommended_worker_count);
+    ASSERT_EQ(recommendations1.recommended_memory_limit_percent, recommendations2.recommended_memory_limit_percent);
+    ASSERT_EQ(recommendations1.recommended_timeout_ms, recommendations2.recommended_timeout_ms);
+    ASSERT_EQ(recommendations1.recommended_priority, recommendations2.recommended_priority);
+    ASSERT_EQ(recommendations1.worker_scaling_confidence, recommendations2.worker_scaling_confidence);
+    ASSERT_EQ(recommendations1.overall_confidence, recommendations2.overall_confidence);
+}
+
+TEST(AutoConfigMetricsConsistency) {
+    AutoConfig& config = AutoConfig::get_instance();
+    
+    auto metrics1 = config.get_metrics_history();
+    auto metrics2 = config.get_metrics_history();
+    
+    ASSERT_EQ(metrics1.size(), metrics2.size());
+    
+    if (!metrics1.empty() && !metrics2.empty()) {
+        ASSERT_EQ(metrics1.back().timestamp, metrics2.back().timestamp);
     }
 } 

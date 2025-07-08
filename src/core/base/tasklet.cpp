@@ -72,14 +72,12 @@ bool Tasklet::has_error() const {
 }
 
 void Tasklet::wait_for_completion() {
-    while (!finished_.load()) {
-        std::this_thread::yield();
-    }
+    std::unique_lock<std::mutex> lock(completion_mutex_);
+    completion_cv_.wait(lock, [this] { return finished_.load(); });
 }
 
 void Tasklet::notify_completion() {
-    // This method is called when the tasklet finishes
-    // In the future, this could be used to notify listeners
+    completion_cv_.notify_all();
 }
 
 } // namespace tasklets 

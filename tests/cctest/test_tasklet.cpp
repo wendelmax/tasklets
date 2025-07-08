@@ -363,7 +363,7 @@ TEST(TaskletSynchronization) {
     ASSERT_TRUE(thread_started.load());
     ASSERT_FALSE(thread_finished.load());
     
-    tasklet.notify_completion();
+    tasklet.mark_finished();
     
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     ASSERT_TRUE(thread_finished.load());

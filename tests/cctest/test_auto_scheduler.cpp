@@ -33,6 +33,7 @@
 #include <uv.h>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 using namespace tasklets;
 using namespace cctest;
@@ -66,112 +67,95 @@ TEST(AutoSchedulerEnableDisable) {
 TEST(AutoSchedulerStrategyManagement) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    ASSERT_EQ(AutoSchedulerStrategy::ADAPTIVE, scheduler.get_strategy());
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::MODERATE, scheduler.get_strategy());
     
-    scheduler.set_strategy(AutoSchedulerStrategy::PERFORMANCE);
-    ASSERT_EQ(AutoSchedulerStrategy::PERFORMANCE, scheduler.get_strategy());
+    scheduler.set_strategy(AutoScheduler::AutoSchedulingStrategy::CONSERVATIVE);
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::CONSERVATIVE, scheduler.get_strategy());
     
-    scheduler.set_strategy(AutoSchedulerStrategy::EFFICIENCY);
-    ASSERT_EQ(AutoSchedulerStrategy::EFFICIENCY, scheduler.get_strategy());
+    scheduler.set_strategy(AutoScheduler::AutoSchedulingStrategy::AGGRESSIVE);
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::AGGRESSIVE, scheduler.get_strategy());
     
-    scheduler.set_strategy(AutoSchedulerStrategy::BALANCED);
-    ASSERT_EQ(AutoSchedulerStrategy::BALANCED, scheduler.get_strategy());
-    
-    scheduler.set_strategy(AutoSchedulerStrategy::ADAPTIVE);
-    ASSERT_EQ(AutoSchedulerStrategy::ADAPTIVE, scheduler.get_strategy());
+    scheduler.set_strategy(AutoScheduler::AutoSchedulingStrategy::MODERATE);
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::MODERATE, scheduler.get_strategy());
 }
 
-TEST(AutoSchedulerJobAnalysis) {
+TEST(AutoSchedulerJobMetricsRecording) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 150;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->set_result("Test result");
+    job->execution_duration = 100;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
-    scheduler.analyze_job(job);
+    scheduler.record_job_metrics(job);
     
-    auto analysis = scheduler.get_job_analysis(job.tasklet_id);
-    ASSERT_GT(analysis.complexity_score, 0.0);
-    ASSERT_GT(analysis.execution_time_ms, 0.0);
-    ASSERT_GT(analysis.timestamp, 0);
+    auto metrics_history = scheduler.get_metrics_history();
+    ASSERT_GT(metrics_history.size(), 0);
+    
+    if (!metrics_history.empty()) {
+        const auto& metrics = metrics_history.back();
+        ASSERT_EQ(1, metrics.completed_jobs);
+        ASSERT_GT(metrics.avg_total_time_ms, 0.0);
+    }
 }
 
-TEST(AutoSchedulerWorkloadAnalysis) {
+TEST(AutoSchedulerRecommendations) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto analysis = scheduler.get_workload_analysis();
-    
-    ASSERT_GE(analysis.avg_complexity, 0.0);
-    ASSERT_GE(analysis.avg_execution_time_ms, 0.0);
-    ASSERT_GE(analysis.throughput_tasks_per_sec, 0.0);
-    ASSERT_GE(analysis.worker_utilization, 0.0);
-    ASSERT_LE(analysis.worker_utilization, 100.0);
-    ASSERT_GT(analysis.timestamp, 0);
-}
-
-TEST(AutoSchedulerSchedulingRecommendations) {
-    AutoScheduler& scheduler = AutoScheduler::get_instance();
-    
-    auto recommendations = scheduler.get_scheduling_recommendations();
+    auto recommendations = scheduler.get_recommendations();
     
     ASSERT_GE(recommendations.recommended_worker_count, 1);
     ASSERT_GE(recommendations.recommended_timeout_ms, 0);
     ASSERT_GE(recommendations.recommended_priority, 0);
-    ASSERT_GE(recommendations.confidence, 0.0);
-    ASSERT_LE(recommendations.confidence, 1.0);
+    ASSERT_GE(recommendations.worker_scaling_confidence, 0.0);
+    ASSERT_LE(recommendations.worker_scaling_confidence, 1.0);
 }
 
-TEST(AutoSchedulerPerformanceOptimization) {
+TEST(AutoSchedulerMetricsHistory) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto optimization = scheduler.get_performance_optimization();
+    auto initial_history = scheduler.get_metrics_history();
+    size_t initial_size = initial_history.size();
     
-    ASSERT_GE(optimization.estimated_improvement_percent, 0.0);
-    ASSERT_GE(optimization.recommended_changes.size(), 0);
-    ASSERT_GT(optimization.timestamp, 0);
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 50;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
+    
+    scheduler.record_job_metrics(job);
+    
+    auto updated_history = scheduler.get_metrics_history();
+    ASSERT_GE(updated_history.size(), initial_size);
 }
 
-TEST(AutoSchedulerHistoricalData) {
+TEST(AutoSchedulerWorkloadPatternDetection) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto history = scheduler.get_historical_data();
+    WorkloadPattern pattern = scheduler.get_detected_pattern();
     
-    ASSERT_GE(history.size(), 0);
-    
-    if (!history.empty()) {
-        const auto& latest = history.back();
-        ASSERT_GT(latest.timestamp, 0);
-        ASSERT_GE(latest.avg_complexity, 0.0);
-        ASSERT_GE(latest.avg_execution_time_ms, 0.0);
-    }
+    ASSERT_TRUE(pattern == WorkloadPattern::CPU_INTENSIVE ||
+                pattern == WorkloadPattern::IO_INTENSIVE ||
+                pattern == WorkloadPattern::MEMORY_INTENSIVE ||
+                pattern == WorkloadPattern::MIXED ||
+                pattern == WorkloadPattern::BURST ||
+                pattern == WorkloadPattern::STEADY);
 }
 
-TEST(AutoSchedulerPatternDetection) {
+TEST(AutoSchedulerJobComplexityEstimation) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto patterns = scheduler.get_detected_patterns();
+    JobComplexity complexity = scheduler.get_avg_complexity();
     
-    ASSERT_GE(patterns.size(), 0);
-    
-    for (const auto& pattern : patterns) {
-        ASSERT_GT(pattern.timestamp, 0);
-        ASSERT_GE(pattern.confidence, 0.0);
-        ASSERT_LE(pattern.confidence, 1.0);
-    }
-}
-
-TEST(AutoSchedulerSettings) {
-    AutoScheduler& scheduler = AutoScheduler::get_instance();
-    
-    auto settings = scheduler.get_settings();
-    
-    ASSERT_EQ(scheduler.is_auto_scheduling_enabled(), settings.is_enabled);
-    ASSERT_EQ(scheduler.get_strategy(), settings.strategy);
-    ASSERT_EQ(scheduler.get_scheduling_recommendations().recommended_worker_count,
-              settings.recommendations.recommended_worker_count);
+    ASSERT_TRUE(complexity == JobComplexity::TRIVIAL ||
+                complexity == JobComplexity::SIMPLE ||
+                complexity == JobComplexity::MODERATE ||
+                complexity == JobComplexity::COMPLEX ||
+                complexity == JobComplexity::HEAVY);
 }
 
 TEST(AutoSchedulerCallbackRegistration) {
@@ -187,14 +171,14 @@ TEST(AutoSchedulerCallbackRegistration) {
     
     scheduler.register_recommendation_callback(callback);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 100;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 75;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
-    scheduler.analyze_job(job);
+    scheduler.record_job_metrics(job);
     
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
@@ -218,14 +202,14 @@ TEST(AutoSchedulerMultipleCallbacks) {
     scheduler.register_recommendation_callback(callback1);
     scheduler.register_recommendation_callback(callback2);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 80;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 60;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
-    scheduler.analyze_job(job);
+    scheduler.record_job_metrics(job);
     
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
@@ -235,211 +219,151 @@ TEST(AutoSchedulerMultipleCallbacks) {
 TEST(AutoSchedulerForceAnalysis) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto initial_recommendations = scheduler.get_scheduling_recommendations();
+    auto initial_recommendations = scheduler.get_recommendations();
     
     scheduler.force_analysis();
     
-    auto updated_recommendations = scheduler.get_scheduling_recommendations();
+    auto updated_recommendations = scheduler.get_recommendations();
     
     ASSERT_GT(updated_recommendations.recommended_worker_count, 0);
-    ASSERT_GE(updated_recommendations.confidence, 0.0);
-    ASSERT_LE(updated_recommendations.confidence, 1.0);
+    ASSERT_GE(updated_recommendations.worker_scaling_confidence, 0.0);
+    ASSERT_LE(updated_recommendations.worker_scaling_confidence, 1.0);
 }
 
-TEST(AutoSchedulerPerformanceStrategy) {
+TEST(AutoSchedulerConservativeStrategy) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    scheduler.set_strategy(AutoSchedulerStrategy::PERFORMANCE);
+    scheduler.set_strategy(AutoScheduler::AutoSchedulingStrategy::CONSERVATIVE);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 200;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 200;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
-    scheduler.analyze_job(job);
+    scheduler.record_job_metrics(job);
     scheduler.force_analysis();
     
-    auto recommendations = scheduler.get_scheduling_recommendations();
+    auto recommendations = scheduler.get_recommendations();
     
-    ASSERT_EQ(AutoSchedulerStrategy::PERFORMANCE, scheduler.get_strategy());
-    ASSERT_GT(recommendations.confidence, 0.0);
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::CONSERVATIVE, scheduler.get_strategy());
+    ASSERT_GT(recommendations.worker_scaling_confidence, 0.0);
 }
 
-TEST(AutoSchedulerEfficiencyStrategy) {
+TEST(AutoSchedulerAggressiveStrategy) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    scheduler.set_strategy(AutoSchedulerStrategy::EFFICIENCY);
+    scheduler.set_strategy(AutoScheduler::AutoSchedulingStrategy::AGGRESSIVE);
     
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 50;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
+    auto job = std::make_shared<MicroJob>();
+    job->tasklet_id = 1;
+    job->execution_duration = 300;
+    job->mark_enqueued();
+    job->mark_started();
+    job->mark_completed();
     
-    scheduler.analyze_job(job);
+    scheduler.record_job_metrics(job);
     scheduler.force_analysis();
     
-    auto recommendations = scheduler.get_scheduling_recommendations();
+    auto recommendations = scheduler.get_recommendations();
     
-    ASSERT_EQ(AutoSchedulerStrategy::EFFICIENCY, scheduler.get_strategy());
-    ASSERT_GT(recommendations.confidence, 0.0);
+    ASSERT_EQ(AutoScheduler::AutoSchedulingStrategy::AGGRESSIVE, scheduler.get_strategy());
+    ASSERT_GT(recommendations.worker_scaling_confidence, 0.0);
 }
 
-TEST(AutoSchedulerBalancedStrategy) {
+TEST(AutoSchedulerTimeoutRecommendations) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    scheduler.set_strategy(AutoSchedulerStrategy::BALANCED);
-    
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 120;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
-    
-    scheduler.analyze_job(job);
     scheduler.force_analysis();
     
-    auto recommendations = scheduler.get_scheduling_recommendations();
+    auto recommendations = scheduler.get_recommendations();
     
-    ASSERT_EQ(AutoSchedulerStrategy::BALANCED, scheduler.get_strategy());
-    ASSERT_GT(recommendations.confidence, 0.0);
+    ASSERT_GE(recommendations.recommended_timeout_ms, 0);
+    ASSERT_GE(recommendations.timeout_confidence, 0.0);
+    ASSERT_LE(recommendations.timeout_confidence, 1.0);
 }
 
-TEST(AutoSchedulerAdaptiveStrategy) {
+TEST(AutoSchedulerPriorityRecommendations) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    scheduler.set_strategy(AutoSchedulerStrategy::ADAPTIVE);
-    
-    MicroJob job;
-    job.tasklet_id = 1;
-    job.execution_duration = 180;
-    job.mark_enqueued();
-    job.mark_started();
-    job.mark_completed();
-    
-    scheduler.analyze_job(job);
     scheduler.force_analysis();
     
-    auto recommendations = scheduler.get_scheduling_recommendations();
+    auto recommendations = scheduler.get_recommendations();
     
-    ASSERT_EQ(AutoSchedulerStrategy::ADAPTIVE, scheduler.get_strategy());
-    ASSERT_GT(recommendations.confidence, 0.0);
+    ASSERT_GE(recommendations.recommended_priority, 0);
+    ASSERT_GE(recommendations.priority_confidence, 0.0);
+    ASSERT_LE(recommendations.priority_confidence, 1.0);
 }
 
-TEST(AutoSchedulerJobComplexityAnalysis) {
+TEST(AutoSchedulerBatchingRecommendations) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    MicroJob simple_job;
-    simple_job.tasklet_id = 1;
-    simple_job.execution_duration = 10;
-    simple_job.mark_enqueued();
-    simple_job.mark_started();
-    simple_job.mark_completed();
+    scheduler.force_analysis();
     
-    scheduler.analyze_job(simple_job);
+    auto recommendations = scheduler.get_recommendations();
     
-    auto simple_analysis = scheduler.get_job_analysis(simple_job.tasklet_id);
-    ASSERT_GT(simple_analysis.complexity_score, 0.0);
-    ASSERT_LT(simple_analysis.complexity_score, 0.5);
-    
-    MicroJob complex_job;
-    complex_job.tasklet_id = 2;
-    complex_job.execution_duration = 500;
-    complex_job.mark_enqueued();
-    complex_job.mark_started();
-    complex_job.mark_completed();
-    
-    scheduler.analyze_job(complex_job);
-    
-    auto complex_analysis = scheduler.get_job_analysis(complex_job.tasklet_id);
-    ASSERT_GT(complex_analysis.complexity_score, simple_analysis.complexity_score);
+    ASSERT_GE(recommendations.recommended_batch_size, 1);
+    ASSERT_GE(recommendations.batching_confidence, 0.0);
+    ASSERT_LE(recommendations.batching_confidence, 1.0);
 }
 
-TEST(AutoSchedulerWorkloadTrends) {
+TEST(AutoSchedulerLoadBalanceRecommendations) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto trends = scheduler.get_workload_trends();
+    scheduler.force_analysis();
     
-    ASSERT_GE(trends.size(), 0);
+    auto recommendations = scheduler.get_recommendations();
     
-    for (const auto& trend : trends) {
-        ASSERT_GT(trend.timestamp, 0);
-        ASSERT_GE(trend.complexity_trend, -1.0);
-        ASSERT_LE(trend.complexity_trend, 1.0);
-        ASSERT_GE(trend.execution_time_trend, -1.0);
-        ASSERT_LE(trend.execution_time_trend, 1.0);
+    ASSERT_GE(recommendations.load_balance_confidence, 0.0);
+    ASSERT_LE(recommendations.load_balance_confidence, 1.0);
+    
+    if (recommendations.should_rebalance) {
+        ASSERT_FALSE(recommendations.worker_assignments.empty());
     }
 }
 
-TEST(AutoSchedulerPerformanceMetrics) {
+TEST(AutoSchedulerMetricsCollection) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto metrics = scheduler.get_performance_metrics();
+    auto metrics = scheduler.get_metrics_history();
     
-    ASSERT_GE(metrics.avg_response_time_ms, 0.0);
-    ASSERT_GE(metrics.throughput_tasks_per_sec, 0.0);
-    ASSERT_GE(metrics.worker_efficiency, 0.0);
-    ASSERT_LE(metrics.worker_efficiency, 100.0);
-    ASSERT_GE(metrics.resource_utilization, 0.0);
-    ASSERT_LE(metrics.resource_utilization, 100.0);
-    ASSERT_GT(metrics.timestamp, 0);
-}
-
-TEST(AutoSchedulerOptimizationHistory) {
-    AutoScheduler& scheduler = AutoScheduler::get_instance();
-    
-    auto history = scheduler.get_optimization_history();
-    
-    ASSERT_GE(history.size(), 0);
-    
-    for (const auto& optimization : history) {
-        ASSERT_GT(optimization.timestamp, 0);
-        ASSERT_GE(optimization.improvement_percent, 0.0);
-        ASSERT_GE(optimization.confidence, 0.0);
-        ASSERT_LE(optimization.confidence, 1.0);
-    }
-}
-
-TEST(AutoSchedulerPatternConfidence) {
-    AutoScheduler& scheduler = AutoScheduler::get_instance();
-    
-    auto patterns = scheduler.get_detected_patterns();
-    
-    for (const auto& pattern : patterns) {
-        ASSERT_GE(pattern.confidence, 0.0);
-        ASSERT_LE(pattern.confidence, 1.0);
+    if (!metrics.empty()) {
+        const auto& latest = metrics.back();
         
-        if (pattern.confidence > 0.8) {
-            ASSERT_GT(pattern.timestamp, 0);
-        }
+        ASSERT_GE(latest.cpu_usage, 0.0);
+        ASSERT_LE(latest.cpu_usage, 100.0);
+        ASSERT_GE(latest.memory_usage, 0.0);
+        ASSERT_LE(latest.memory_usage, 100.0);
+        ASSERT_GE(latest.worker_utilization, 0.0);
+        ASSERT_LE(latest.worker_utilization, 100.0);
+        ASSERT_GE(latest.jobs_per_second, 0.0);
+        ASSERT_GE(latest.avg_execution_time_ms, 0.0);
+        ASSERT_GT(latest.timestamp, 0);
     }
 }
 
 TEST(AutoSchedulerRecommendationConsistency) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto recommendations1 = scheduler.get_scheduling_recommendations();
-    auto recommendations2 = scheduler.get_scheduling_recommendations();
+    auto recommendations1 = scheduler.get_recommendations();
+    auto recommendations2 = scheduler.get_recommendations();
     
     ASSERT_EQ(recommendations1.recommended_worker_count, recommendations2.recommended_worker_count);
     ASSERT_EQ(recommendations1.recommended_timeout_ms, recommendations2.recommended_timeout_ms);
     ASSERT_EQ(recommendations1.recommended_priority, recommendations2.recommended_priority);
-    ASSERT_EQ(recommendations1.confidence, recommendations2.confidence);
+    ASSERT_EQ(recommendations1.worker_scaling_confidence, recommendations2.worker_scaling_confidence);
 }
 
-TEST(AutoSchedulerAnalysisConsistency) {
+TEST(AutoSchedulerMetricsConsistency) {
     AutoScheduler& scheduler = AutoScheduler::get_instance();
     
-    auto analysis1 = scheduler.get_workload_analysis();
-    auto analysis2 = scheduler.get_workload_analysis();
+    auto metrics1 = scheduler.get_metrics_history();
+    auto metrics2 = scheduler.get_metrics_history();
     
-    ASSERT_EQ(analysis1.avg_complexity, analysis2.avg_complexity);
-    ASSERT_EQ(analysis1.avg_execution_time_ms, analysis2.avg_execution_time_ms);
-    ASSERT_EQ(analysis1.throughput_tasks_per_sec, analysis2.throughput_tasks_per_sec);
-    ASSERT_EQ(analysis1.worker_utilization, analysis2.worker_utilization);
-    ASSERT_EQ(analysis1.timestamp, analysis2.timestamp);
+    ASSERT_EQ(metrics1.size(), metrics2.size());
+    
+    if (!metrics1.empty() && !metrics2.empty()) {
+        ASSERT_EQ(metrics1.back().timestamp, metrics2.back().timestamp);
+    }
 } 
