@@ -33,6 +33,7 @@
 #include <functional>
 #include <string>
 #include <cstdint>
+#include <memory> // Added for std::shared_ptr
 
 namespace tasklets {
 
@@ -108,6 +109,16 @@ struct MicroJob {
      */
     bool has_error;
     
+    /**
+     * @brief Stores the execution time of the task in milliseconds.
+     */
+    long long execution_duration;
+
+    // For JS tasks
+    std::shared_ptr<std::string> js_result_holder;
+    std::shared_ptr<std::string> js_error_holder;
+    std::shared_ptr<bool> js_has_error_holder;
+
     // =====================================================================
     // Constructor
     // =====================================================================
@@ -121,7 +132,8 @@ struct MicroJob {
     MicroJob() : 
         tasklet_id(0),
         thread_pool(nullptr),
-        has_error(false) {
+        has_error(false),
+        execution_duration(0) {
         work.data = this;
     }
     
@@ -164,6 +176,22 @@ struct MicroJob {
      */
     bool is_successful() const {
         return !has_error;
+    }
+    
+    /**
+     * @brief Resets the MicroJob state for reuse in an object pool
+     */
+    void reset() {
+        task = nullptr;
+        result.clear();
+        error.clear();
+        has_error = false;
+        tasklet_id = 0;
+        thread_pool = nullptr;
+        execution_duration = 0;
+        js_result_holder.reset();
+        js_error_holder.reset();
+        js_has_error_holder.reset();
     }
     
     /**

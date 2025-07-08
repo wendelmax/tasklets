@@ -1,19 +1,19 @@
 /**
  * Copyright (c) 2025 Jackson Wendel Santos Sá
  * Licensed under the MIT License
- * 
+ *
  * @file tasklets.d.ts
  * @brief TypeScript definitions for modern tasklets API
  */
 
 /**
  * Modern Tasklets API - Simple, Promise-based, and user-friendly
- * 
+ *
  * This module provides a modern JavaScript API for high-performance tasklets,
  * with Promise-based execution, automatic error handling, and intuitive configuration.
  */
 
-import { EventEmitter } from 'events';
+import {EventEmitter} from 'events';
 
 /**
  * Configuration options for tasklets
@@ -35,6 +35,7 @@ export interface TaskletConfig {
 export interface TaskOptions {
     /** Timeout for this specific task in milliseconds */
     timeout?: number;
+
     /** Additional options passed to the native module */
     [key: string]: any;
 }
@@ -315,7 +316,7 @@ export import TaskletContext = require('./taskletContext');
 /**
  * Export the Tasklets class
  */
-export { Tasklets };
+export {Tasklets};
 
 /**
  * Default export

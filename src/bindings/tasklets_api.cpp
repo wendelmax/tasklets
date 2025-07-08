@@ -27,40 +27,10 @@
  * @date 2025
  */
 
-#include <node_api.h>
 #include "napi_wrapper.hpp"
 
-/**
- * @brief Main entry point for the Tasklets N-API module
- * 
- * This function initializes the module and exports all the tasklets
- * functions to JavaScript.
- */
-Napi::Object InitModule(Napi::Env env, Napi::Object exports) {
-    // Tasklet management functions
-    exports.Set("spawn", Napi::Function::New(env, tasklets::napi_wrapper::spawn_tasklet));
-    exports.Set("join", Napi::Function::New(env, tasklets::napi_wrapper::join_tasklet));
-    exports.Set("joinAll", Napi::Function::New(env, tasklets::napi_wrapper::join_all_tasklets));
-    
-    // Result and error handling functions
-    exports.Set("getResult", Napi::Function::New(env, tasklets::napi_wrapper::get_tasklet_result));
-    exports.Set("hasError", Napi::Function::New(env, tasklets::napi_wrapper::has_tasklet_error));
-    exports.Set("getError", Napi::Function::New(env, tasklets::napi_wrapper::get_tasklet_error));
-    exports.Set("isFinished", Napi::Function::New(env, tasklets::napi_wrapper::is_tasklet_finished));
-    
-    // Statistics and monitoring functions
-    exports.Set("getStats", Napi::Function::New(env, tasklets::napi_wrapper::get_stats));
-    
-    // Configuration functions
-    exports.Set("setWorkerThreadCount", Napi::Function::New(env, tasklets::napi_wrapper::set_worker_thread_count));
-    exports.Set("getWorkerThreadCount", Napi::Function::New(env, tasklets::napi_wrapper::get_worker_thread_count));
-    
-    // Logging functions
-    exports.Set("setLogLevel", Napi::Function::New(env, tasklets::napi_wrapper::set_log_level));
-    exports.Set("getLogLevel", Napi::Function::New(env, tasklets::napi_wrapper::get_log_level));
-    
-    return exports;
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+    return TaskletsWrapper::Init(env, exports);
 }
 
-// Register the module with Node.js
-NODE_API_MODULE(tasklets, InitModule) 
+NODE_API_MODULE(tasklets, Init) 

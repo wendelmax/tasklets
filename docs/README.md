@@ -13,6 +13,7 @@ Welcome to the Tasklets documentation! This directory contains comprehensive gui
 - **[Performance Guide](performance-guide.md)** - Performance optimization tips
 - **[Best Practices](best-practices.md)** - Recommended patterns and practices
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Threading Model](threading-model.md)** - Deep dive into the library's internal architecture
 
 ##  Quick Links
 

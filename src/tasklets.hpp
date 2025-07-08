@@ -52,6 +52,7 @@
 #include "core/native_thread_pool.hpp"
 #include "core/stats.hpp"
 #include "core/logger.hpp"
+#include "core/memory_manager.hpp"
 
 // System includes for adaptive configuration
 #include <unistd.h>  // for sysconf

@@ -42,7 +42,8 @@
     "bench:run": "node benches/run.js",
     "bench:runAll": "node benches/runAll.js",
     "bench:batch": "node benches/batch.js",
-    "bench:overhead": "node benches/overhead.js"
+    "bench:overhead": "node benches/overhead.js",
+    "bench:fastmode": "node benches/fastmode.js"
   },
   "keywords": [
     "tasklets",

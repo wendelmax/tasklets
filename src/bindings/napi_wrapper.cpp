@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
+ 
 /**
  * @file napi_wrapper.cpp
  * @brief N-API wrapper utilities implementation
@@ -28,423 +28,186 @@
  */
 
 #include "napi_wrapper.hpp"
-#include "../tasklets.hpp"
-#include "../core/native_thread_pool.hpp"
-#include "../core/logger.hpp"
+#include <napi.h>
 #include <iostream>
-#include <sstream>
+#include <memory>
+#include <string>
+#include <functional>
+#include <thread>
+#include <chrono>
+#include <sched.h>
+#include <pthread.h>
 
-namespace tasklets {
-namespace napi_wrapper {
+Napi::FunctionReference TaskletsWrapper::constructor;
 
-// =====================================================================
-// Tasklet Management
-// =====================================================================
+Napi::Object TaskletsWrapper::Init(Napi::Env env, Napi::Object exports) {
+    Napi::HandleScope scope(env);
 
-Napi::Value spawn_tasklet(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected at least 1 argument").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_function(env, info[0], "tasklet function")) {
-            return env.Null();
-        }
-        
-        // Get the JavaScript function
-        Napi::Function js_function = info[0].As<Napi::Function>();
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Spawn the tasklet
-        uint64_t tasklet_id = thread_pool.spawn_js(js_function, env);
-        
-        return Napi::Number::New(env, static_cast<double>(tasklet_id));
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    Napi::Function func = DefineClass(env, "TaskletsWrapper", {
+        InstanceMethod("spawnJs", &TaskletsWrapper::SpawnJs),
+        InstanceMethod("configure", &TaskletsWrapper::Configure),
+        InstanceMethod("getStats", &TaskletsWrapper::GetStats),
+        InstanceMethod("getResult", &TaskletsWrapper::GetResult),
+        InstanceMethod("hasError", &TaskletsWrapper::HasError),
+        InstanceMethod("getError", &TaskletsWrapper::GetError),
+    });
+
+    constructor = Napi::Persistent(func);
+    constructor.SuppressDestruct();
+
+    exports.Set("TaskletsWrapper", func);
+    return exports;
 }
 
-Napi::Value join_tasklet(const Napi::CallbackInfo& info) {
+TaskletsWrapper::TaskletsWrapper(const Napi::CallbackInfo& info) 
+    : Napi::ObjectWrap<TaskletsWrapper>(info) {
+    // Use singleton instance for memory manager
+    std::shared_ptr<tasklets::IMemoryManager> memory_manager(&tasklets::MemoryManager::get_instance(), [](tasklets::IMemoryManager*){});
+    thread_pool = std::make_unique<tasklets::NativeThreadPool>(memory_manager);
+}
+
+TaskletsWrapper::~TaskletsWrapper() = default;
+
+Napi::Value TaskletsWrapper::Configure(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     
-    try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "tasklet ID")) {
-            return env.Null();
-        }
-        
-        // Get tasklet ID
-        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Join the tasklet
-        thread_pool.join(tasklet_id);
-        
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::TypeError::New(env, "Configuration object expected").ThrowAsJavaScriptException();
         return env.Undefined();
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
     }
+
+    Napi::Object config = info[0].As<Napi::Object>();
+    
+    if (config.Has("maxTasklets")) {
+        // Note: MemoryManager doesn't have set_max_tasklets anymore
+        // This would need to be implemented if needed
+        (void)config.Get("maxTasklets").As<Napi::Number>().Uint32Value();
+    }
+    
+    if (config.Has("logLevel")) {
+        std::string log_level = config.Get("logLevel").As<Napi::String>().Utf8Value();
+        // Note: Logger is not available in this context
+        // This would need to be implemented if needed
+        (void)log_level;
+    }
+
+    if (config.Has("memoryLimit")) {
+        double memory_limit = config.Get("memoryLimit").As<Napi::Number>().DoubleValue();
+        auto& memory_manager = tasklets::MemoryManager::get_instance();
+        memory_manager.set_memory_limit_percent(memory_limit);
+    }
+
+    return env.Undefined();
 }
 
-Napi::Value join_all_tasklets(const Napi::CallbackInfo& info) {
+Napi::Value TaskletsWrapper::SpawnJs(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     
-    try {
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Join all tasklets
-        thread_pool.join_all();
-        
+    if (info.Length() < 1 || !info[0].IsFunction()) {
+        Napi::TypeError::New(env, "Function expected as first argument").ThrowAsJavaScriptException();
         return env.Undefined();
-        
+    }
+
+    Napi::Function js_function = info[0].As<Napi::Function>();
+    
+    // Check memory usage through MemoryManager
+    auto& memory_manager = tasklets::MemoryManager::get_instance();
+    if (!memory_manager.is_memory_usage_acceptable()) {
+        Napi::Error::New(env, "System memory usage is above the configured limit, cannot spawn new tasklet").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    try {
+        auto job_id = thread_pool->spawn_js(js_function, env);
+        return Napi::String::New(env, std::to_string(job_id));
     } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
+        Napi::Error::New(env, std::string("Failed to spawn tasklet: ") + e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
     }
 }
 
-// =====================================================================
-// Result and Error Handling
-// =====================================================================
-
-Napi::Value get_tasklet_result(const Napi::CallbackInfo& info) {
+Napi::Value TaskletsWrapper::GetStats(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     
+    Napi::Object stats = Napi::Object::New(env);
+    
+    // Get memory statistics from MemoryManager
+    auto& memory_manager = tasklets::MemoryManager::get_instance();
+    auto memory_stats = memory_manager.get_system_memory_stats();
+    
+    stats.Set("freeMemoryBytes", Napi::Number::New(env, memory_stats.system_free_memory_bytes));
+    stats.Set("totalMemoryBytes", Napi::Number::New(env, memory_stats.system_total_memory_bytes));
+    stats.Set("usedMemoryBytes", Napi::Number::New(env, memory_stats.system_used_memory_bytes));
+    stats.Set("memoryUsagePercent", Napi::Number::New(env, memory_stats.system_memory_usage_percent));
+    
+    // Also provide KB values for backward compatibility
+    stats.Set("freeMemoryKB", Napi::Number::New(env, memory_stats.system_free_memory_bytes / 1024));
+    stats.Set("totalMemoryKB", Napi::Number::New(env, memory_stats.system_total_memory_bytes / 1024));
+    stats.Set("usedMemoryKB", Napi::Number::New(env, memory_stats.system_used_memory_bytes / 1024));
+    
+    auto scheduler_stats = thread_pool->get_stats();
+    stats.Set("activeJobs", Napi::Number::New(env, scheduler_stats.active_threads));
+    stats.Set("completedJobs", Napi::Number::New(env, scheduler_stats.completed_threads));
+    
+    return stats;
+}
+
+Napi::Value TaskletsWrapper::GetResult(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Job ID string expected").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    std::string job_id_str = info[0].As<Napi::String>().Utf8Value();
+    uint64_t job_id = std::stoull(job_id_str);
+    
     try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "tasklet ID")) {
-            return env.Null();
-        }
-        
-        // Get tasklet ID
-        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Get result
-        std::string result = thread_pool.get_result(tasklet_id);
-        
+        std::string result = thread_pool->get_result(job_id);
         return Napi::String::New(env, result);
-        
     } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
+        Napi::Error::New(env, std::string("Failed to get result: ") + e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
     }
 }
 
-Napi::Value has_tasklet_error(const Napi::CallbackInfo& info) {
+Napi::Value TaskletsWrapper::HasError(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Job ID string expected").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    std::string job_id_str = info[0].As<Napi::String>().Utf8Value();
+    uint64_t job_id = std::stoull(job_id_str);
+    
     try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "tasklet ID")) {
-            return env.Null();
-        }
-        
-        // Get tasklet ID
-        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Check for error
-        bool has_error = thread_pool.has_error(tasklet_id);
-        
+        bool has_error = thread_pool->has_error(job_id);
         return Napi::Boolean::New(env, has_error);
-        
     } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
+        Napi::Error::New(env, std::string("Failed to check error status: ") + e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
     }
 }
 
-Napi::Value get_tasklet_error(const Napi::CallbackInfo& info) {
+Napi::Value TaskletsWrapper::GetError(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     
+    if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Job ID string expected").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
+    std::string job_id_str = info[0].As<Napi::String>().Utf8Value();
+    uint64_t job_id = std::stoull(job_id_str);
+    
     try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "tasklet ID")) {
-            return env.Null();
-        }
-        
-        // Get tasklet ID
-        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Get error
-        std::string error = thread_pool.get_error(tasklet_id);
-        
+        std::string error = thread_pool->get_error(job_id);
         return Napi::String::New(env, error);
-        
     } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-Napi::Value is_tasklet_finished(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected tasklet ID").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "tasklet ID")) {
-            return env.Null();
-        }
-        
-        // Get tasklet ID
-        uint64_t tasklet_id = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Check if finished
-        bool finished = thread_pool.is_finished(tasklet_id);
-        
-        return Napi::Boolean::New(env, finished);
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-// =====================================================================
-// Statistics and Monitoring
-// =====================================================================
-
-Napi::Value get_stats(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Get statistics
-        auto stats = thread_pool.get_stats();
-        
-        // Convert to JavaScript object
-        return stats_to_js_object(env, stats);
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-// =====================================================================
-// Configuration
-// =====================================================================
-
-Napi::Value set_worker_thread_count(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected thread count").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "thread count")) {
-            return env.Null();
-        }
-        
-        // Get thread count
-        size_t thread_count = static_cast<size_t>(info[0].As<Napi::Number>().DoubleValue());
-        
-        // Validate thread count using dynamic limits
-        const size_t max_threads = config::get_max_worker_threads();
-        if (thread_count == 0 || thread_count > max_threads) {
-            std::string message = "Thread count must be between 1 and " + std::to_string(max_threads);
-            Napi::RangeError::New(env, message).ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Set thread count
-        thread_pool.set_worker_thread_count(thread_count);
-        
+        Napi::Error::New(env, std::string("Failed to get error: ") + e.what()).ThrowAsJavaScriptException();
         return env.Undefined();
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
     }
-}
-
-Napi::Value get_worker_thread_count(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Get thread pool instance
-        auto& thread_pool = get_thread_pool_instance(env);
-        
-        // Get thread count
-        size_t thread_count = thread_pool.get_worker_thread_count();
-        
-        return Napi::Number::New(env, static_cast<double>(thread_count));
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-// =====================================================================
-// Logging Configuration
-// =====================================================================
-
-Napi::Value set_log_level(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Validate arguments
-        if (info.Length() < 1) {
-            Napi::TypeError::New(env, "Expected log level").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        if (!validate_number(env, info[0], "log level")) {
-            return env.Null();
-        }
-        
-        // Get log level
-        int level = static_cast<int>(info[0].As<Napi::Number>().Int32Value());
-        
-        // Validate log level
-        if (level < 0 || level > 5) {
-            Napi::RangeError::New(env, "Log level must be between 0 (OFF) and 5 (TRACE)").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-        
-        // Set log level
-        tasklets::Logger::set_level(static_cast<tasklets::LogLevel>(level));
-        
-        return env.Undefined();
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-Napi::Value get_log_level(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    
-    try {
-        // Get log level
-        int level = static_cast<int>(tasklets::Logger::get_level());
-        
-        return Napi::Number::New(env, level);
-        
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-}
-
-// =====================================================================
-// Utility Functions
-// =====================================================================
-
-bool validate_function(Napi::Env env, const Napi::Value& value, const char* arg_name) {
-    if (!value.IsFunction()) {
-        std::string message = std::string("Expected ") + arg_name + " to be a function";
-        Napi::TypeError::New(env, message).ThrowAsJavaScriptException();
-        return false;
-    }
-    return true;
-}
-
-bool validate_number(Napi::Env env, const Napi::Value& value, const char* arg_name) {
-    if (!value.IsNumber()) {
-        std::string message = std::string("Expected ") + arg_name + " to be a number";
-        Napi::TypeError::New(env, message).ThrowAsJavaScriptException();
-        return false;
-    }
-    return true;
-}
-
-Napi::Object stats_to_js_object(Napi::Env env, const SchedulerStats& stats) {
-    Napi::Object obj = Napi::Object::New(env);
-    
-    // Basic counts
-    obj.Set("activeTasklets", Napi::Number::New(env, static_cast<double>(stats.active_threads)));
-    obj.Set("totalTaskletsCreated", Napi::Number::New(env, static_cast<double>(stats.total_threads_created)));
-    obj.Set("completedTasklets", Napi::Number::New(env, static_cast<double>(stats.completed_threads)));
-    obj.Set("failedTasklets", Napi::Number::New(env, static_cast<double>(stats.failed_threads)));
-    
-    // Worker thread info
-    obj.Set("workerThreads", Napi::Number::New(env, static_cast<double>(stats.worker_threads)));
-    
-    // Performance metrics
-    obj.Set("totalExecutionTimeMs", Napi::Number::New(env, static_cast<double>(stats.total_execution_time_ms)));
-    obj.Set("averageExecutionTimeMs", Napi::Number::New(env, stats.average_execution_time_ms));
-    obj.Set("successRate", Napi::Number::New(env, stats.success_rate));
-    
-    // Worker utilization array
-    Napi::Array utilization = Napi::Array::New(env, stats.worker_utilization.size());
-    for (size_t i = 0; i < stats.worker_utilization.size(); ++i) {
-        utilization.Set(i, Napi::Number::New(env, static_cast<double>(stats.worker_utilization[i])));
-    }
-    obj.Set("workerUtilization", utilization);
-    
-    return obj;
-}
-
-NativeThreadPool& get_thread_pool_instance(Napi::Env env) {
-    try {
-        return NativeThreadPool::get_instance();
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, std::string("Failed to get thread pool instance: ") + e.what()).ThrowAsJavaScriptException();
-        // This will never be reached, but needed for return type
-        static NativeThreadPool* dummy = nullptr;
-        return *dummy;
-    }
-}
-
-} // namespace napi_wrapper
-} // namespace tasklets 
+} 

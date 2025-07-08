@@ -33,137 +33,95 @@
 #include <atomic>
 #include <string>
 #include <cstdint>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
+
+#ifndef BUILDING_CCTEST
+#include <napi.h>
+#endif
 
 namespace tasklets {
 
-/**
- * @brief Represents a lightweight task in the Tasklets system
- * 
- * A Tasklet is a lightweight representation of a task that can be
- * executed asynchronously in the libuv thread pool. It tracks the state,
- * result, and error information of the task.
- */
 class Tasklet {
 public:
-    /**
-     * @brief Constructs a new Tasklet
-     * @param id Unique identifier for this tasklet
-     * @param task The function to execute
-     */
+    // Constructor for C++ tasks
     Tasklet(uint64_t id, std::function<void()> task);
+
+    // Constructor for JS tasks
+    Tasklet(
+        uint64_t id,
+        std::function<void()> task,
+        std::shared_ptr<std::string> result_holder,
+        std::shared_ptr<std::string> error_holder,
+        std::shared_ptr<bool> has_error_holder,
+        std::shared_ptr<bool> completed_holder,
+        std::shared_ptr<std::mutex> completion_mutex,
+        std::shared_ptr<std::condition_variable> completion_cv
+    );
     
-    /**
-     * @brief Destructor
-     */
     ~Tasklet();
     
-    // Non-copyable and non-movable
     Tasklet(const Tasklet&) = delete;
     Tasklet& operator=(const Tasklet&) = delete;
     Tasklet(Tasklet&&) = delete;
     Tasklet& operator=(Tasklet&&) = delete;
     
-    // =====================================================================
     // State Management
-    // =====================================================================
-    
-    /**
-     * @brief Gets the unique ID of this tasklet
-     * @return Tasklet ID
-     */
     uint64_t get_id() const { return id_; }
-    
-    /**
-     * @brief Checks if the tasklet has finished execution
-     * @return true if finished, false otherwise
-     */
     bool is_finished() const { return finished_.load(); }
-    
-    /**
-     * @brief Checks if the tasklet is currently running
-     * @return true if running, false otherwise
-     */
     bool is_running() const { return running_.load(); }
-    
-    /**
-     * @brief Marks the tasklet as running
-     */
     void mark_running() { running_ = true; }
+    void mark_finished();
     
-    /**
-     * @brief Marks the tasklet as finished
-     */
-    void mark_finished() { 
-        finished_ = true; 
-        running_ = false; 
-    }
-    
-    // =====================================================================
     // Result Management
-    // =====================================================================
+    void set_result(const std::string& result);
+    const std::string& get_result() const;
     
-    /**
-     * @brief Sets the result of the tasklet execution
-     * @param result The result string
-     */
-    void set_result(const std::string& result) { result_ = result; }
+    #ifndef BUILDING_CCTEST
+    void set_native_result(const Napi::Value& value);
+    Napi::Value get_native_result(Napi::Env env) const;
+    #endif
     
-    /**
-     * @brief Gets the result of the tasklet execution
-     * @return The result string
-     */
-    const std::string& get_result() const { return result_; }
+    bool has_native_result() const { return has_native_result_; }
     
-    // =====================================================================
     // Error Management
-    // =====================================================================
+    void set_error(const std::string& error);
+    const std::string& get_error() const;
+    bool has_error() const;
     
-    /**
-     * @brief Sets an error for this tasklet
-     * @param error The error message
-     */
-    void set_error(const std::string& error) { 
-        error_ = error; 
-        has_error_ = true; 
-    }
-    
-    /**
-     * @brief Gets the error message
-     * @return The error message
-     */
-    const std::string& get_error() const { return error_; }
-    
-    /**
-     * @brief Checks if the tasklet has an error
-     * @return true if there's an error, false otherwise
-     */
-    bool has_error() const { return has_error_; }
-    
-    // =====================================================================
     // Task Management
-    // =====================================================================
-    
-    /**
-     * @brief Gets the task function
-     * @return The task function
-     */
     std::function<void()> get_task() const { return task_; }
+    
+    // Synchronization
+    void wait_for_completion();
+    void notify_completion();
 
 private:
-    // Tasklet identification
     uint64_t id_;
-    
-    // Task to execute
     std::function<void()> task_;
     
-    // State tracking (atomic for thread safety)
     std::atomic<bool> finished_;
     std::atomic<bool> running_;
     
-    // Result and error storage
+    // For C++ tasks and string results from JS tasks
     std::string result_;
     std::string error_;
-    bool has_error_;
+    std::atomic<bool> has_error_;
+    
+    // For JS tasks, to sync with the main thread
+    std::shared_ptr<std::string> js_result_holder_;
+    std::shared_ptr<std::string> js_error_holder_;
+    std::shared_ptr<bool> js_has_error_holder_;
+    std::shared_ptr<bool> js_completed_holder_;
+    std::shared_ptr<std::mutex> completion_mutex_;
+    std::shared_ptr<std::condition_variable> completion_cv_;
+    
+    // Native result storage for performance optimization
+    #ifndef BUILDING_CCTEST
+    Napi::Reference<Napi::Value> native_result_ref_;
+    #endif
+    std::atomic<bool> has_native_result_;
 };
 
 } // namespace tasklets 

@@ -269,3 +269,67 @@ const health = tasklets.getHealth();
 ---
 
 *This roadmap should be reviewed and updated as implementation progresses and new issues are discovered.* 
+
+## Proposed Modern API (Future)
+
+This section outlines a proposed "modern" API that aims to simplify common patterns. This is not yet implemented.
+
+### `tasklets.runAll(tasks, options?)`
+Execute multiple tasks in parallel and return a single Promise that resolves when all tasks are complete.
+
+- **`tasks: Function[]`**: An array of functions to execute.
+- **`options: Object`**: Options to apply to all tasks.
+- **Returns**: `Promise<T[]>`
+
+**Example:**
+```javascript
+const results = await tasklets.runAll([
+  () => fibonacci(35),
+  () => fibonacci(36),
+]);
+```
+
+### `tasklets.batch(taskConfigs, options?)`
+A more advanced method for executing tasks in batches with progress tracking.
+
+- **`taskConfigs: { name: string, task: Function }[]`**: Array of named task configurations.
+- **`options: { onProgress: Function }`**: Options including a progress callback.
+- **Returns**: `Promise<{name: string, success: boolean, result?: any, error?: any}[]>`
+
+**Example:**
+```javascript
+const results = await tasklets.batch(largeTaskList, {
+  onProgress: (progress) => {
+    console.log(`Progress: ${progress.percentage}%`);
+  }
+});
+```
+
+### `tasklets.retry(fn, options?)`
+Automatically retry a task if it fails, with configurable exponential backoff.
+
+- **`fn: Function`**: The function to retry.
+- **`options: { attempts: number, delay: number, backoff: number }`**: Retry strategy options.
+- **Returns**: `Promise<T>`
+
+**Example:**
+```javascript
+const data = await tasklets.retry(() => fetchFromFlakyApi(), {
+  attempts: 5,
+  delay: 200, // ms
+  backoff: 2
+});
+```
+
+### `tasklets.shutdown(options?)`
+Gracefully shut down the thread pool, waiting for active tasks to complete.
+
+- **`options: { timeout: number }`**: Timeout to wait for tasks to finish.
+- **Returns**: `Promise<void>`
+
+### Advanced `tasklets.config(options)`
+The configuration will be expanded to include more options for controlling the thread pool.
+
+- **`workers: number | 'auto'`**: Number of worker threads.
+- **`timeout: number`**: Default timeout for tasks.
+- **`maxMemory: string`**: A future feature to limit memory usage. 

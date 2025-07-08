@@ -4,12 +4,14 @@
       "target_name": "tasklets",
       "sources": [
         "src/bindings/tasklets_api.cpp",
+        "src/bindings/napi_wrapper.cpp",
         "src/core/tasklet.cpp",
         "src/core/microjob.cpp",
+        "src/core/memory_manager.cpp",
         "src/core/stats.cpp",
         "src/core/logger.cpp",
         "src/core/native_thread_pool.cpp",
-        "src/bindings/napi_wrapper.cpp"
+        "src/core/config.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
@@ -26,6 +28,9 @@
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS"
+      ],
+      "libraries": [
+        "-luv"
       ],
       "conditions": [
         ["OS=='mac'", {
@@ -59,8 +64,10 @@
         "tests/cctest/test_microjob.cpp",
         "src/core/tasklet.cpp",
         "src/core/microjob.cpp",
+        "src/core/memory_manager.cpp",
         "src/core/stats.cpp",
-        "src/core/logger.cpp"
+        "src/core/logger.cpp",
+        "src/core/config.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
@@ -76,6 +83,9 @@
       ],
       "cflags_cc!": [
         "-fno-exceptions"
+      ],
+      "defines": [
+        "BUILDING_CCTEST"
       ],
       "ldflags": [
         "-pthread"
