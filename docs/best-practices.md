@@ -14,7 +14,7 @@ The safest and most performant way to use `tasklets` is to treat your tasks like
 
 When you run code on a separate thread, accessing shared variables from the main thread (closures) can lead to unpredictable behavior known as **race conditions**. Multiple threads trying to read and write to the same variable at the same time can corrupt data and crash your application.
 
-#### ❌ Bad Example: Using Shared State (High Risk)
+####  Bad Example: Using Shared State (High Risk)
 
 ```javascript
 const { tasklet } = require('tasklets');
@@ -33,7 +33,7 @@ for (let i = 0; i < 10; i++) {
 }
 ```
 
-### ✅ Good Example: Passing Data Explicitly
+###  Good Example: Passing Data Explicitly
 
 The correct approach is to pass all necessary data to your task as arguments and get the result back through the returned `Promise`. This makes your tasks independent and thread-safe.
 
@@ -81,17 +81,17 @@ By following this "Data In, Data Out" model, you eliminate race conditions, make
 For those contributing to the C++ core of this library, maintaining stability is paramount.
 
 1.  **Embrace Smart Pointers:**
-    *   Use `std::shared_ptr` for objects with shared ownership, like `Tasklet` instances, to automate memory management and prevent use-after-free errors.
-    *   Use `std::unique_ptr` for objects with a single, clear owner to ensure exclusive ownership and automatic cleanup.
+  *  Use `std::shared_ptr` for objects with shared ownership, like `Tasklet` instances, to automate memory management and prevent use-after-free errors.
+  *  Use `std::unique_ptr` for objects with a single, clear owner to ensure exclusive ownership and automatic cleanup.
 
 2.  **Strict Concurrency Control:**
-    *   Protect all access to shared data structures (e.g., queues, lists accessed by multiple threads) with `std::mutex` and `std::lock_guard`. The `lock_guard` pattern ensures mutexes are always released.
+  *  Protect all access to shared data structures (e.g., queues, lists accessed by multiple threads) with `std::mutex` and `std::lock_guard`. The `lock_guard` pattern ensures mutexes are always released.
 
 3.  **Isolate Node.js from Worker Threads:**
-    *   **Never** use `Napi::` types (like `Napi::Object`, `Napi::Function`, or `Napi::Env`) inside a C++ worker thread.
-    *   All data must be copied from JavaScript objects into plain C++ data structures before being passed to a worker.
-    *   Results must be passed back to the main Node.js thread via a `Napi::ThreadSafeFunction`, which is the only safe way to communicate back from a worker.
+  *  **Never** use `Napi::` types (like `Napi::Object`, `Napi::Function`, or `Napi::Env`) inside a C++ worker thread.
+  *  All data must be copied from JavaScript objects into plain C++ data structures before being passed to a worker.
+  *  Results must be passed back to the main Node.js thread via a `Napi::ThreadSafeFunction`, which is the only safe way to communicate back from a worker.
 
 4.  **Defensive N-API Programming:**
-    *   Always check for pending JavaScript exceptions using `env.IsExceptionPending()` after N-API calls that can fail. If an exception is pending, stop execution and return immediately.
-    *   Use `Napi::HandleScope` in every function that interacts with the JavaScript engine to ensure proper garbage collection of handles.
+  *  Always check for pending JavaScript exceptions using `env.IsExceptionPending()` after N-API calls that can fail. If an exception is pending, stop execution and return immediately.
+  *  Use `Napi::HandleScope` in every function that interacts with the JavaScript engine to ensure proper garbage collection of handles.

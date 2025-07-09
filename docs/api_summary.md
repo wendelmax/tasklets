@@ -3,7 +3,7 @@
 ## Overview
 This document summarizes all the functions implemented in the Tasklets JavaScript wrapper, organized by priority and functionality.
 
-## ✅ Core Functions (Essential)
+##  Core Functions (Essential)
 
 ### Tasklet Management
 - `spawn(taskFunction)` - Create a new tasklet
@@ -24,7 +24,7 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `getStats()` - Get basic system statistics
 - `getHealth()` - Get system health information
 
-## 🔧 Configuration Management (High Priority)
+##  Configuration Management (High Priority)
 
 ### Worker Thread Configuration
 - `setWorkerThreadCount(count)` - Set number of worker threads
@@ -36,7 +36,7 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `setLogLevel(level)` - Set logging level ('off', 'error', 'warn', 'info', 'debug', 'trace')
 - `getLogLevel()` - Get current logging level
 
-## 📊 Advanced Tasklet Management (Medium Priority)
+##  Advanced Tasklet Management (Medium Priority)
 
 ### Tasklet Control
 - `joinAll()` - Wait for all tasklets to complete
@@ -48,7 +48,7 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `getVersion()` - Get library version
 - `resetToDefaults()` - Reset configuration to defaults
 
-## 🚀 Advanced Configuration (Advanced)
+##  Advanced Configuration (Advanced)
 
 ### Memory Configuration
 - `setMemoryLimitPercent(percent)` - Set memory usage limit (0-100%)
@@ -71,7 +71,7 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `setMicrojobPoolMaxSize(size)` - Set maximum microjob pool size
 - `getMicrojobPoolMaxSize()` - Get current maximum pool size
 
-## 📈 Enhanced Statistics (Advanced)
+##  Enhanced Statistics (Advanced)
 
 ### Detailed Statistics
 - `getDetailedStats()` - Get comprehensive system statistics
@@ -79,7 +79,7 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `getSuccessRate()` - Get task success rate percentage
 - `getAverageExecutionTime()` - Get average task execution time
 
-## 📝 Logging Functions (Advanced)
+##  Logging Functions (Advanced)
 
 ### Direct Logging
 - `log(level, component, message)` - Log message with specific level
@@ -89,13 +89,13 @@ This document summarizes all the functions implemented in the Tasklets JavaScrip
 - `debug(component, message)` - Log debug message
 - `trace(component, message)` - Log trace message
 
-## 🔧 Configuration Methods
+##  Configuration Methods
 
 ### Main Configuration
 - `configure(options)` - Configure multiple settings at once
 - `config(options)` - Alias for configure (for backward compatibility)
 
-## 📋 Usage Examples
+##  Usage Examples
 
 ### Basic Usage
 ```javascript
@@ -103,9 +103,9 @@ const tasklets = require('./lib/index');
 
 // Configure
 tasklets.configure({
-    workers: 4,
-    timeout: 10000,
-    logging: 'info'
+  workers: 4,
+  timeout: 10000,
+  logging: 'info'
 });
 
 // Run a simple task
@@ -116,9 +116,9 @@ console.log(result); // "Task completed successfully"
 ### Parallel Execution
 ```javascript
 const tasks = [
-    () => 'Task 1',
-    () => 'Task 2',
-    () => 'Task 3'
+  () => 'Task 1',
+  () => 'Task 2',
+  () => 'Task 3'
 ];
 
 const results = await tasklets.runAll(tasks);
@@ -128,25 +128,25 @@ console.log(results); // Array of results
 ### Batch Processing
 ```javascript
 const batchConfigs = [
-    { name: 'task1', task: () => 'Result 1' },
-    { name: 'task2', task: () => 'Result 2' }
+  { name: 'task1', task: () => 'Result 1' },
+  { name: 'task2', task: () => 'Result 2' }
 ];
 
 const results = await tasklets.batch(batchConfigs, {
-    progress: (completed, total, name) => {
-        console.log(`Progress: ${completed}/${total} - ${name}`);
-    }
+  progress: (completed, total, name) => {
+  console.log(`Progress: ${completed}/${total} - ${name}`);
+  }
 });
 ```
 
 ### Retry Logic
 ```javascript
 const result = await tasklets.retry(() => {
-    // Some task that might fail
-    return 'Success';
+  // Some task that might fail
+  return 'Success';
 }, {
-    attempts: 3,
-    delay: 1000
+  attempts: 3,
+  delay: 1000
 });
 ```
 
@@ -165,9 +165,9 @@ console.log('Success rate:', tasklets.getSuccessRate());
 console.log('Worker utilization:', tasklets.getWorkerUtilization());
 ```
 
-## 🎯 Implementation Status
+##  Implementation Status
 
-### ✅ Fully Implemented
+###  Fully Implemented
 - All core tasklet management functions
 - High-level API (run, runAll, batch, retry)
 - Basic configuration management
@@ -176,17 +176,17 @@ console.log('Worker utilization:', tasklets.getWorkerUtilization());
 - Enhanced statistics
 - Logging system
 
-### 🔄 Partially Implemented
+###  Partially Implemented
 - Native integration for some configuration functions (marked with TODO)
 - Some advanced features may need native module updates
 
-### 📝 Notes
+###  Notes
 - All functions include proper error handling and validation
 - Configuration is stored in JavaScript and synchronized with native module where possible
 - Statistics combine native module data with Node.js system information
 - Logging system provides both configuration and direct logging capabilities
 
-## 🚀 Performance Features
+##  Performance Features
 
 - **Adaptive Configuration**: Automatically adjusts settings based on system capabilities
 - **Memory Management**: Configurable memory limits and cleanup intervals

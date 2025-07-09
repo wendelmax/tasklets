@@ -1,6 +1,6 @@
 # Adaptive Configuration System
 
-The Tasklets library now features an intelligent automated adaptive configuration system that automatically optimizes settings based on runtime performance metrics and system conditions. This system works similarly to the memory management system, providing automatic optimization without manual intervention.
+The Tasklets library features an intelligent automated adaptive configuration system that automatically optimizes settings based on runtime performance metrics and system conditions. This system provides automatic optimization without manual intervention.
 
 ## Overview
 
@@ -123,12 +123,12 @@ const metrics = tasklets.getAdaptiveMetrics();
 console.log('Total metrics recorded:', metrics.length);
 
 if (metrics.length > 0) {
-    const latest = metrics[metrics.length - 1];
-    console.log('CPU utilization:', latest.cpu_utilization + '%');
-    console.log('Memory usage:', latest.memory_usage_percent + '%');
-    console.log('Worker utilization:', latest.worker_utilization + '%');
-    console.log('Throughput:', latest.throughput_tasks_per_sec + ' tasks/sec');
-    console.log('Success rate:', (latest.success_rate * 100) + '%');
+  const latest = metrics[metrics.length - 1];
+  console.log('CPU utilization:', latest.cpu_utilization + '%');
+  console.log('Memory usage:', latest.memory_usage_percent + '%');
+  console.log('Worker utilization:', latest.worker_utilization + '%');
+  console.log('Throughput:', latest.throughput_tasks_per_sec + ' tasks/sec');
+  console.log('Success rate:', (latest.success_rate * 100) + '%');
 }
 ```
 
@@ -249,9 +249,9 @@ tasklets.enableAdaptiveMode();
 
 // Run tasks - system automatically optimizes
 const results = await tasklets.runAll([
-    () => heavyComputation(),
-    () => dataProcessing(),
-    () => fileOperations()
+  () => heavyComputation(),
+  () => dataProcessing(),
+  () => fileOperations()
 ]);
 
 // Check adaptive metrics
@@ -314,11 +314,11 @@ Regularly check adaptive metrics to understand system behavior:
 
 ```javascript
 setInterval(() => {
-    const metrics = tasklets.getAdaptiveMetrics();
-    const lastAdjustment = tasklets.getLastAdjustment();
-    
-    console.log('System health:', metrics.length > 0 ? 
-        metrics[metrics.length - 1].overall_health_score : 'N/A');
+  const metrics = tasklets.getAdaptiveMetrics();
+  const lastAdjustment = tasklets.getLastAdjustment();
+
+  console.log('System health:', metrics.length > 0 ? 
+  metrics[metrics.length - 1].overall_health_score : 'N/A');
 }, 30000);
 ```
 

@@ -16,16 +16,16 @@ The core philosophy is to **delegate, not reinvent**. Instead of building a thre
 
 Our threading architecture is composed of a few key C++ classes:
 
--   **`Tasklet`**: A lightweight object that represents a single unit of work. It encapsulates the user's function and tracks the task's state (e.g., pending, running, finished, errored). A `Tasklet` is a concept, **not** an OS thread.
+-  **`Tasklet`**: A lightweight object that represents a single unit of work. It encapsulates the user's function and tracks the task's state (e.g., pending, running, finished, errored). A `Tasklet` is a concept, **not** an OS thread.
 
--   **`NativeThreadPool`**: The central coordinator. This singleton class is the main entry point for the system. It's responsible for:
-    -   Creating and managing `Tasklet`s.
-    -   Submitting tasks to the `libuv` thread pool.
-    -   Handling communication between the main Node.js thread and the worker threads.
+-  **`NativeThreadPool`**: The central coordinator. This singleton class is the main entry point for the system. It's responsible for:
+  -  Creating and managing `Tasklet`s.
+  -  Submitting tasks to the `libuv` thread pool.
+  -  Handling communication between the main Node.js thread and the worker threads.
 
--   **`MicroJob`**: A small wrapper struct that contains the `Tasklet` and other data needed for `libuv` to execute the work. We use an object pool to recycle `MicroJob` instances, minimizing memory allocation overhead.
+-  **`MicroJob`**: A small wrapper struct that contains the `Tasklet` and other data needed for `libuv` to execute the work. We use an object pool to recycle `MicroJob` instances, minimizing memory allocation overhead.
 
--   **`libuv` Thread Pool**: The underlying engine. `libuv` maintains a pool of native OS-level worker threads. When we submit a `MicroJob`, `libuv` places it in a queue, and one of its worker threads will eventually pick it up and execute it.
+-  **`libuv` Thread Pool**: The underlying engine. `libuv` maintains a pool of native OS-level worker threads. When we submit a `MicroJob`, `libuv` places it in a queue, and one of its worker threads will eventually pick it up and execute it.
 
 ---
 
@@ -39,26 +39,26 @@ This diagram shows the journey of a standard C++ task from creation to completio
 
 ```mermaid
 graph TD
-    subgraph "Main Node.js Thread"
-        A["JS: tasklets.spawn(cpp_fn)"] --> B{"NativeThreadPool"};
-        B --> C["uv_queue_work()"];
-        F["JS: join(id)"] --> G{"Waits for completion<br/>(via yield loop)"};
-    end
+  subgraph "Main Node.js Thread"
+  A["JS: tasklets.spawn(cpp_fn)"] --> B{"NativeThreadPool"};
+  B --> C["uv_queue_work()"];
+  F["JS: join(id)"] --> G{"Waits for completion<br/>(via yield loop)"};
+  end
 
-    subgraph "libuv Backend"
-        D[("Work Queue")];
-        E["Worker Thread"];
-    end
+  subgraph "libuv Backend"
+  D[("Work Queue")];
+  E["Worker Thread"];
+  end
 
-    subgraph "Event Loop Thread"
-        H["after_work_callback"];
-    end
+  subgraph "Event Loop Thread"
+  H["after_work_callback"];
+  end
 
-    C -- "Enqueues job" --> D;
-    E -- "Dequeues job" --> E;
-    E -- "Executes C++ task" --> E;
-    E -- "On completion, notifies libuv" --> H;
-    H -- "Updates Tasklet state" --> G;
+  C -- "Enqueues job" --> D;
+  E -- "Dequeues job" --> E;
+  E -- "Executes C++ task" --> E;
+  E -- "On completion, notifies libuv" --> H;
+  H -- "Updates Tasklet state" --> G;
 ```
 
 ---
@@ -97,23 +97,23 @@ The flow for a JavaScript task is more intricate, as it involves coordinating be
 
 ```mermaid
 graph TD
-    subgraph "Main Node.js Thread (Event Loop)"
-        A["JS: tasklets.spawn(js_fn)"] --> B{"NativeThreadPool"};
-        B --> C["uv_queue_work()"];
-        I["JS function (js_fn)"] -- "Called by TSFN" --> J["Executes JS code"];
-        J -- "Returns result" --> K["TSFN Callback on main thread"];
-    end
+  subgraph "Main Node.js Thread (Event Loop)"
+  A["JS: tasklets.spawn(js_fn)"] --> B{"NativeThreadPool"};
+  B --> C["uv_queue_work()"];
+  I["JS function (js_fn)"] -- "Called by TSFN" --> J["Executes JS code"];
+  J -- "Returns result" --> K["TSFN Callback on main thread"];
+  end
 
-    subgraph "libuv Worker Thread"
-        D["Worker starts"] -- "Dequeues job" --> E{"Runs C++ wrapper task"};
-        E -- "Calls" --> F["ThreadSafeFunction.BlockingCall()"];
-        F -- "Blocks worker thread,<br/>schedules call on main thread" --> I;
-        F -- "Waits for result" --> G;
-        G["Receives result from main thread"];
-        G --> H{"Marks Tasklet as complete"};
-    end
+  subgraph "libuv Worker Thread"
+  D["Worker starts"] -- "Dequeues job" --> E{"Runs C++ wrapper task"};
+  E -- "Calls" --> F["ThreadSafeFunction.BlockingCall()"];
+  F -- "Blocks worker thread,<br/>schedules call on main thread" --> I;
+  F -- "Waits for result" --> G;
+  G["Receives result from main thread"];
+  G --> H{"Marks Tasklet as complete"};
+  end
 
-    K -- "Sends result back to waiting<br/>worker thread" --> G;
+  K -- "Sends result back to waiting<br/>worker thread" --> G;
 ```
 
 #### The JS Interop Steps
@@ -168,32 +168,32 @@ To help you get the most out of `tasklets`, this section covers memory managemen
 
 Performance is a key goal of `tasklets`. We've built in several optimizations to minimize overhead and prevent common sources of memory leaks.
 
-*   **`MicroJob` Object Pooling**: To avoid the performance cost of frequent memory allocations, `tasklets` uses an object pool for `MicroJob` wrappers. Instead of creating a new `MicroJob` for every task and deleting it afterward, we recycle existing instances. This significantly reduces the overhead of spawning tasks. The process is visualized below.
+*  **`MicroJob` Object Pooling**: To avoid the performance cost of frequent memory allocations, `tasklets` uses an object pool for `MicroJob` wrappers. Instead of creating a new `MicroJob` for every task and deleting it afterward, we recycle existing instances. This significantly reduces the overhead of spawning tasks. The process is visualized below.
 
 ```mermaid
 graph TD
-    subgraph "NativeThreadPool"
-        A["spawn(task)"] --> B{"Request MicroJob"};
-    end
+  subgraph "NativeThreadPool"
+  A["spawn(task)"] --> B{"Request MicroJob"};
+  end
 
-    subgraph "MemoryManager (Object Pool)"
-        C{"Is pool empty?"};
-        D["Yes"] --> E["Create new MicroJob"];
-        F["No"] --> G["Reuse existing MicroJob"];
-        E --> H["Return to ThreadPool"];
-        G --> H;
-        J["Task Complete"] --> K{"Release MicroJob"};
-        K --> L[("Add to pool")];
-    end
+  subgraph "MemoryManager (Object Pool)"
+  C{"Is pool empty?"};
+  D["Yes"] --> E["Create new MicroJob"];
+  F["No"] --> G["Reuse existing MicroJob"];
+  E --> H["Return to ThreadPool"];
+  G --> H;
+  J["Task Complete"] --> K{"Release MicroJob"};
+  K --> L[("Add to pool")];
+  end
 
-    B --> C;
-    H --> I["Job submitted to libuv"];
-    I --> J;
+  B --> C;
+  H --> I["Job submitted to libuv"];
+  I --> J;
 ```
 
-*   **`Tasklet` Lifecycle Management**: The lifecycle of `Tasklet` objects is managed automatically using C++ smart pointers (`std::shared_ptr`). This modern memory management technique ensures that a `Tasklet` is deallocated if and only if it is no longer being used by the thread pool or referenced anywhere in your code. This helps prevent memory leaks.
+*  **`Tasklet` Lifecycle Management**: The lifecycle of `Tasklet` objects is managed automatically using C++ smart pointers (`std::shared_ptr`). This modern memory management technique ensures that a `Tasklet` is deallocated if and only if it is no longer being used by the thread pool or referenced anywhere in your code. This helps prevent memory leaks.
 
-*   **Data Transfer Costs**: While it's powerful to move work between threads, there is always a cost associated with transferring data. This is especially true for JavaScript tasks that involve complex objects. Be mindful that large data payloads must be serialized and deserialized, which can impact performance. For best results, keep the data passed between the main thread and worker threads as minimal as possible.
+*  **Data Transfer Costs**: While it's powerful to move work between threads, there is always a cost associated with transferring data. This is especially true for JavaScript tasks that involve complex objects. Be mindful that large data payloads must be serialized and deserialized, which can impact performance. For best results, keep the data passed between the main thread and worker threads as minimal as possible.
 
 ### Advanced Error Handling
 
@@ -201,32 +201,32 @@ Robust error handling is critical in a multi-threaded environment. `tasklets` en
 
 ```mermaid
 graph TD
-    subgraph "Path 1: C++ Exception"
-        A["Worker Thread: Task executes"] --> B{try...catch};
-        B -- "Throws std::exception" --> C["Error caught"];
-        C --> D["e.what() stored in Tasklet"];
-    end
+  subgraph "Path 1: C++ Exception"
+  A["Worker Thread: Task executes"] --> B{try...catch};
+  B -- "Throws std::exception" --> C["Error caught"];
+  C --> D["e.what() stored in Tasklet"];
+  end
 
-    subgraph "Path 2: JavaScript Error"
-        E["Main Thread: JS function executes"] -- "Throws Error" --> F["N-API catches error"];
-        F --> G["Error sent back to Worker Thread"];
-        G --> H["Worker stores error in Tasklet"];
-    end
+  subgraph "Path 2: JavaScript Error"
+  E["Main Thread: JS function executes"] -- "Throws Error" --> F["N-API catches error"];
+  F --> G["Error sent back to Worker Thread"];
+  G --> H["Worker stores error in Tasklet"];
+  end
 
-    subgraph "User Code on Main Thread"
-        I["join() completes"] --> J{"has_error()?"};
-        J -- "true" --> K["get_error() retrieves message"];
-    end
-    
-    D -. "Leads to" .-> J;
-    H -. "Leads to" .-> J;
+  subgraph "User Code on Main Thread"
+  I["join() completes"] --> J{"has_error()?"};
+  J -- "true" --> K["get_error() retrieves message"];
+  end
+
+  D -. "Leads to" .-> J;
+  H -. "Leads to" .-> J;
 ```
 
-*   **C++ Exceptions**: If a C++ function executed by a tasklet throws an `std::exception`, our system automatically catches it within the worker thread. The exception's message (`e.what()`) is extracted and stored safely within the corresponding `Tasklet` object.
+*  **C++ Exceptions**: If a C++ function executed by a tasklet throws an `std::exception`, our system automatically catches it within the worker thread. The exception's message (`e.what()`) is extracted and stored safely within the corresponding `Tasklet` object.
 
-*   **JavaScript Errors**: Similarly, if a JavaScript function executed via `tasklets` throws an error, the `ThreadSafeFunction` mechanism catches the exception on the main event loop. This error is then securely communicated back to the waiting worker thread and stored in the `Tasklet`.
+*  **JavaScript Errors**: Similarly, if a JavaScript function executed via `tasklets` throws an error, the `ThreadSafeFunction` mechanism catches the exception on the main event loop. This error is then securely communicated back to the waiting worker thread and stored in the `Tasklet`.
 
-*   **Retrieving Errors**: From your main JavaScript thread, you can confidently check for and handle these errors. A task that has thrown an exception will be marked as `finished` and will have its error flag set.
+*  **Retrieving Errors**: From your main JavaScript thread, you can confidently check for and handle these errors. A task that has thrown an exception will be marked as `finished` and will have its error flag set.
 
 Here is the standard pattern for retrieving results or errors:
 
@@ -251,22 +251,22 @@ if (tasklets.has_error(taskletId)) {
 
 ### Best Practices and Common Pitfalls
 
-*   **Task Granularity**: Think carefully about the size of your tasks.
-    *   **Tasks that are too small** can be inefficient. The overhead of scheduling the task might be greater than the work it performs.
-    *   **Tasks that are too large** can monopolize a worker thread, delaying the execution of other pending tasks.
-    *   **Guideline**: Aim for medium-grained, CPU-bound tasks. If you have a very large problem, try to break it down into several independent tasklets.
+*  **Task Granularity**: Think carefully about the size of your tasks.
+  *  **Tasks that are too small** can be inefficient. The overhead of scheduling the task might be greater than the work it performs.
+  *  **Tasks that are too large** can monopolize a worker thread, delaying the execution of other pending tasks.
+  *  **Guideline**: Aim for medium-grained, CPU-bound tasks. If you have a very large problem, try to break it down into several independent tasklets.
 
-*   **CPU-bound vs. I/O-bound Work**: `tasklets` is primarily designed to offload **CPU-bound** work (e.g., complex calculations, image processing, data analysis) from the Node.js event loop. For **I/O-bound** work (e.g., reading files, making network requests), Node.js's built-in asynchronous methods are already highly efficient and non-blocking. Using `tasklets` for I/O is possible, but it may not be the most effective pattern.
+*  **CPU-bound vs. I/O-bound Work**: `tasklets` is primarily designed to offload **CPU-bound** work (e.g., complex calculations, image processing, data analysis) from the Node.js event loop. For **I/O-bound** work (e.g., reading files, making network requests), Node.js's built-in asynchronous methods are already highly efficient and non-blocking. Using `tasklets` for I/O is possible, but it may not be the most effective pattern.
 
-*   **Avoiding Deadlocks**: Be careful when using `join()`, especially with JavaScript tasklets. A deadlock can occur if the main thread `join()`s a tasklet that, in turn, requires some action from the blocked main thread to complete. This creates a circular dependency where nothing can proceed. Ensure your tasklets have minimal dependencies on the main thread while they are running.
+*  **Avoiding Deadlocks**: Be careful when using `join()`, especially with JavaScript tasklets. A deadlock can occur if the main thread `join()`s a tasklet that, in turn, requires some action from the blocked main thread to complete. This creates a circular dependency where nothing can proceed. Ensure your tasklets have minimal dependencies on the main thread while they are running.
 
 ## A Note on Context Switching
 
 The term "context switching" is important here.
 
--   **Task Switching (in `libuv`)**: When a worker thread finishes one `MicroJob`, it immediately checks the queue for another. This is a simple, efficient process managed within the thread pool and does not involve the OS scheduler.
+-  **Task Switching (in `libuv`)**: When a worker thread finishes one `MicroJob`, it immediately checks the queue for another. This is a simple, efficient process managed within the thread pool and does not involve the OS scheduler.
 
--   **Thread Context Switching (in the OS)**: The `libuv` worker threads are real OS threads. The operating system's scheduler is responsible for pausing and resuming these threads to share CPU time with all other processes on the system. This is a "heavy" operation where the CPU's state is saved and restored.
+-  **Thread Context Switching (in the OS)**: The `libuv` worker threads are real OS threads. The operating system's scheduler is responsible for pausing and resuming these threads to share CPU time with all other processes on the system. This is a "heavy" operation where the CPU's state is saved and restored.
 
 `tasklets` does not perform thread context switching itself. It relies on `libuv` for task scheduling and the OS for thread scheduling. This is the right way to build high-performance systems.
 

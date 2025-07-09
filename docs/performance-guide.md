@@ -129,25 +129,21 @@ const tasklets = require('tasklets');
 
 // Too fine-grained (inefficient)
 function processArrayBad(array) {
-  const taskletIds = array.map(item => 
-  tasklets.spawn(() => item * 2)
-  );
-  tasklets.joinMany(taskletIds);
-  return taskletIds.map(id => tasklets.getResult(id));
+  return Promise.all(array.map(item => 
+    tasklets.run(() => item * 2)
+  ));
 }
 
 // Well-balanced
 function processArrayGood(array, chunkSize = 1000) {
   const chunks = [];
   for (let i = 0; i < array.length; i += chunkSize) {
-  chunks.push(array.slice(i, i + chunkSize));
+    chunks.push(array.slice(i, i + chunkSize));
   }
 
-  const taskletIds = chunks.map(chunk => 
-  tasklets.spawn(() => chunk.map(item => item * 2))
-  );
-  tasklets.joinMany(taskletIds);
-  return taskletIds.map(id => tasklets.getResult(id)).flat();
+  return Promise.all(chunks.map(chunk => 
+    tasklets.run(() => chunk.map(item => item * 2))
+  )).then(results => results.flat());
 }
 ```
 
@@ -162,14 +158,11 @@ async function batchProcess(items, batchSize = 100) {
   const results = [];
 
   for (let i = 0; i < items.length; i += batchSize) {
-  const batch = items.slice(i, i + batchSize);
-  const taskletIds = batch.map(item => 
-  tasklets.spawn(() => processItem(item))
-  );
-
-  tasklets.joinMany(taskletIds);
-  const batchResults = taskletIds.map(id => tasklets.getResult(id));
-  results.push(...batchResults);
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(item => 
+      tasklets.run(() => processItem(item))
+    ));
+    results.push(...batchResults);
   }
 
   return results;

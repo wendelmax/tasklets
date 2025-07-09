@@ -1,6 +1,6 @@
 # Intelligent Auto-Scheduler
 
-The Tasklets intelligent auto-scheduler is a sophisticated system that automatically optimizes `MicroJob` and `NativeThreadPool` behavior based on runtime metrics and workload patterns. It provides intelligent recommendations for worker scaling, timeout adjustments, priority management, batching strategies, and load balancing.
+The Tasklets intelligent auto-scheduler is a sophisticated system that automatically optimizes task execution behavior based on runtime metrics and workload patterns. It provides intelligent recommendations for worker scaling, timeout adjustments, and performance optimization.
 
 ## Overview
 
@@ -26,9 +26,8 @@ The auto-scheduler continuously monitors system performance and workload charact
 ### 3. Automatic Optimizations
 - **Worker Thread Scaling**: Automatically adjusts worker thread count based on utilization
 - **Timeout Management**: Recommends optimal timeout values based on job complexity
-- **Priority Adjustment**: Suggests priority levels based on workload patterns
-- **Batching Strategies**: Recommends batch sizes for optimal throughput
-- **Load Balancing**: Suggests worker assignment optimizations
+- **Performance Optimization**: Suggests optimal settings based on workload patterns
+- **Resource Management**: Optimizes resource allocation for maximum throughput
 
 ### 4. Performance Monitoring
 - **Real-time Metrics**: Collects comprehensive performance data
@@ -68,35 +67,7 @@ Returns current auto-scheduling recommendations.
 const recommendations = tasklets.getAutoSchedulingRecommendations();
 ```
 
-**Returns:**
-```javascript
-{
-  // Worker scaling recommendations
-  recommended_worker_count: 8,
-  should_scale_up: true,
-  should_scale_down: false,
-  worker_scaling_confidence: 0.85,
-
-  // Timeout recommendations
-  recommended_timeout_ms: 15000,
-  should_adjust_timeout: true,
-  timeout_confidence: 0.72,
-
-  // Priority recommendations
-  recommended_priority: 5,
-  should_adjust_priority: true,
-  priority_confidence: 0.68,
-
-  // Batching recommendations
-  recommended_batch_size: 25,
-  should_batch: true,
-  batching_confidence: 0.75,
-
-  // Load balancing recommendations
-  should_rebalance: false,
-  load_balance_confidence: 0.45
-}
-```
+**Returns:** Object with optimization recommendations.
 
 #### `applyAutoSchedulingRecommendations()`
 Applies the current auto-scheduling recommendations.
@@ -112,42 +83,7 @@ Returns historical performance metrics.
 const metricsHistory = tasklets.getAutoSchedulingMetricsHistory();
 ```
 
-**Returns:**
-```javascript
-[
-  {
-    // Queue metrics
-    queue_length: 15,
-    active_jobs: 8,
-    completed_jobs: 150,
-    failed_jobs: 2,
-
-    // Timing metrics
-    avg_queue_wait_time_ms: 25.5,
-    avg_execution_time_ms: 45.2,
-    avg_total_time_ms: 70.7,
-
-    // Throughput metrics
-    jobs_per_second: 12.5,
-    throughput_trend: 1.2,
-
-    // Worker metrics
-    worker_utilization: 85.5,
-    worker_idle_time: 14.5,
-    worker_count: 8,
-
-    // Load metrics
-    cpu_usage: 78.3,
-    memory_usage: 45.2,
-    load_balance_score: 92.1,
-
-    // Pattern detection
-    detected_pattern: 0, // CPU_INTENSIVE
-    avg_complexity: 2,   // MODERATE
-    timestamp: 1640995200000
-  }
-]
-```
+**Returns:** Array of historical performance metrics.
 
 #### `getAutoSchedulingSettings()`
 Returns comprehensive auto-scheduler settings and state.
@@ -271,7 +207,7 @@ tasklets.enableAutoScheduling();
 setInterval(() => {
   const recommendations = tasklets.getAutoSchedulingRecommendations();
   if (recommendations.worker_scaling_confidence > 0.8) {
-    tasklets.applyAutoSchedulingRecommendations();
+  tasklets.applyAutoSchedulingRecommendations();
   }
 }, 30000); // Check every 30 seconds
 ```
@@ -310,9 +246,9 @@ const recommendations = tasklets.getAutoSchedulingRecommendations();
 
 if (recommendations.worker_scaling_confidence > 0.7) {
   if (recommendations.should_scale_up) {
-    console.log(`Scaling up to ${recommendations.recommended_worker_count} workers`);
+  console.log(`Scaling up to ${recommendations.recommended_worker_count} workers`);
   } else if (recommendations.should_scale_down) {
-    console.log(`Scaling down to ${recommendations.recommended_worker_count} workers`);
+  console.log(`Scaling down to ${recommendations.recommended_worker_count} workers`);
   }
   tasklets.applyAutoSchedulingRecommendations();
 }
@@ -378,12 +314,12 @@ tasklets.setLogLevel('debug');
 setInterval(() => {
   const metrics = tasklets.getAutoSchedulingMetricsHistory();
   const latest = metrics[metrics.length - 1];
-  
+
   console.log('Current metrics:', {
-    pattern: latest.detected_pattern,
-    complexity: latest.avg_complexity,
-    utilization: latest.worker_utilization,
-    throughput: latest.jobs_per_second
+  pattern: latest.detected_pattern,
+  complexity: latest.avg_complexity,
+  utilization: latest.worker_utilization,
+  throughput: latest.jobs_per_second
   });
 }, 5000);
 ```

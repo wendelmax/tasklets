@@ -179,6 +179,59 @@ export interface ShutdownOptions {
 }
 
 /**
+ * Auto-scheduling recommendations
+ */
+export interface AutoSchedulingRecommendations {
+    recommended_worker_count: number;
+    should_scale_up: boolean;
+    should_scale_down: boolean;
+    worker_scaling_confidence: number;
+    recommended_timeout_ms: number;
+    should_adjust_timeout: boolean;
+    timeout_confidence: number;
+    recommended_priority: number;
+    should_adjust_priority: boolean;
+    priority_confidence: number;
+    recommended_batch_size: number;
+    should_batch: boolean;
+    batching_confidence: number;
+    should_rebalance: boolean;
+    load_balance_confidence: number;
+}
+
+/**
+ * Auto-scheduling metrics
+ */
+export interface AutoSchedulingMetrics {
+    cpu_utilization: number;
+    memory_usage_percent: number;
+    worker_utilization: number;
+    throughput_tasks_per_sec: number;
+    average_execution_time_ms: number;
+    success_rate: number;
+    queue_length: number;
+    active_jobs: number;
+    completed_jobs: number;
+    failed_jobs: number;
+    timestamp: number;
+}
+
+/**
+ * Auto-scheduling settings
+ */
+export interface AutoSchedulingSettings {
+    enabled: boolean;
+    strategy: number;
+    metricsCount: number;
+    lastAdjustment: {
+        reason: string;
+        changes_made: string;
+        performance_impact: number;
+        timestamp: number;
+    };
+}
+
+/**
  * Main Tasklets class
  */
 export declare class Tasklets extends EventEmitter {
@@ -239,6 +292,111 @@ export declare class Tasklets extends EventEmitter {
      * @returns Promise that resolves when shutdown is complete
      */
     shutdown(options?: ShutdownOptions): Promise<void>;
+
+    // Performance and automation methods
+    getPerformanceSummary(): any;
+    enableAutomation(): this;
+    disableAutomation(): this;
+    getAutomationStatus(): any;
+    optimizeForCPU(): this;
+    optimizeForIO(): this;
+    optimizeForMemory(): this;
+    optimizeForBalanced(): this;
+    getOptimizationStatus(): any;
+
+    // Advanced processing methods
+    processBatchAdaptive<T, R>(items: T[], processor: (item: T) => R, options?: any): Promise<R[]>;
+    processCPUIntensive<T, R>(items: T[], processor: (item: T) => R): Promise<R[]>;
+    processIOIntensive<T, R>(items: T[], processor: (item: T) => R): Promise<R[]>;
+    processMemoryIntensive<T, R>(items: T[], processor: (item: T) => R): Promise<R[]>;
+    processWithMemoryAwareness<T, R>(items: T[], processor: (item: T) => R, options?: any): Promise<R[]>;
+
+    // Optimized execution methods
+    runOptimized<T>(task: () => T, options?: TaskOptions): Promise<T>;
+    runAllOptimized<T>(tasks: (() => T)[], options?: TaskOptions): Promise<T[]>;
+    batchOptimized(taskConfigs: BatchTaskConfig[], options?: BatchOptions): Promise<BatchResult[]>;
+    runWithWorkloadOptimization<T>(task: () => T, workloadType?: string, options?: TaskOptions): Promise<T>;
+    runWithMemoryAwareness<T>(task: () => T, options?: TaskOptions): Promise<T>;
+
+    // Memory management methods
+    getMemoryStats(): any;
+    forceCleanup(): any;
+
+    // Adaptive and configuration methods
+    enableAdaptiveMode(): this;
+    disableAdaptiveMode(): this;
+    isAdaptiveModeEnabled(): boolean;
+    setWorkloadType(workloadType: string): this;
+    getWorkloadType(): string;
+    forceAdaptiveAdjustment(): this;
+    getAdaptiveMetrics(): any;
+    getLastAdjustment(): any;
+    getAdaptiveSettings(): any;
+    enableAutoScheduling(): this;
+    disableAutoScheduling(): this;
+    isAutoSchedulingEnabled(): boolean;
+    getAutoSchedulingRecommendations(): AutoSchedulingRecommendations;
+    applyAutoSchedulingRecommendations(): this;
+    getAutoSchedulingMetricsHistory(): AutoSchedulingMetrics[];
+    getAutoSchedulingSettings(): AutoSchedulingSettings;
+    getSystemInfo(): any;
+    getConfigurationSummary(): any;
+    getRecommendations(): any;
+    recordPerformanceMetrics(metrics: any): this;
+
+    // Worker thread methods
+    setWorkerThreadCount(count: number): this;
+    getWorkerThreadCount(): number;
+    getMaxWorkerThreads(): number;
+    getMinWorkerThreads(): number;
+    getOptimalWorkerThreads(): number;
+
+    // Logging methods
+    setLogLevel(level: string): this;
+    getLogLevel(): string;
+
+    // Memory configuration methods
+    setMemoryLimitPercent(percent: number): this;
+    getMemoryLimitPercent(): number;
+    setCleanupIntervalMs(interval: number): this;
+    getCleanupIntervalMs(): number;
+
+    // Stack configuration methods
+    getDefaultStackSize(): number;
+    getMaxStackSize(): number;
+    getMinStackSize(): number;
+
+    // Adaptive configuration methods
+    getAdaptivePollIntervalMs(): number;
+    getAdaptiveBatchSize(): number;
+
+    // Pool configuration methods
+    setMicrojobPoolInitialSize(size: number): this;
+    getMicrojobPoolInitialSize(): number;
+    setMicrojobPoolMaxSize(size: number): this;
+    getMicrojobPoolMaxSize(): number;
+
+    // Configuration management methods
+    resetToDefaults(): this;
+    getCPUAffinitySettings(): any;
+    getPerformanceHistory(): any;
+
+    // Utility methods
+    log(level: string, component: string, message: string): this;
+    error(component: string, message: string): this;
+    warn(component: string, message: string): this;
+    info(component: string, message: string): this;
+    debug(component: string, message: string): this;
+    trace(component: string, message: string): this;
+
+    // Backward compatibility methods
+    get_memory_stats(): any;
+    force_cleanup(): any;
+    set_max_tasklets(max: number): this;
+    set_cleanup_interval(interval: number): this;
+
+    // Version and info
+    getVersion(): string;
 }
 
 /**

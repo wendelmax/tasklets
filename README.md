@@ -7,7 +7,7 @@ A **breakthrough implementation** of lightweight cooperative tasklets for Node.j
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/tasklets)](https://nodejs.org/)
 
-## **Version 1.0.0 - Modern API Revolution**
+## Version 1.0.0 - Modern API Revolution
 
 **Complete API redesign** with focus on **developer experience** and **simplicity**:
 
@@ -98,8 +98,8 @@ const batchResults = await tasklets.batch([
     { name: 'task2', task: () => heavyWork2() },
     { name: 'task3', task: () => heavyWork3() }
 ], {
-    onProgress: (progress) => {
-        console.log(`Progress: ${progress.completed}/${progress.total}`);
+    progress: (completed, total, name) => {
+        console.log(`Progress: ${completed}/${total} - ${name}`);
     }
 });
 
@@ -118,16 +118,16 @@ await tasklets.shutdown({ timeout: 5000 });
 
 ## **Modern API Overview**
 
-### **Core Tasklets Functions**
+### Core Tasklets Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
 | `run(fn, options?)` | Execute a single task | `await tasklets.run(() => work())` |
 | `runAll(tasks, options?)` | Execute tasks in parallel | `await tasklets.runAll([task1, task2])` |
-| `batch(configs, options?)` | Batch processing with progress | `await tasklets.batch(tasks, { onProgress })` |
+| `batch(configs, options?)` | Batch processing with progress | `await tasklets.batch(tasks, { progress })` |
 | `retry(fn, options?)` | Retry with exponential backoff | `await tasklets.retry(() => api(), { attempts: 3 })` |
 
-### **Configuration & Monitoring**
+### Configuration & Monitoring
 
 | Function | Description | Example |
 |----------|-------------|---------|
@@ -234,16 +234,16 @@ const batchResults = await tasklets.batch([
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### **Core Features**
+### Core Features
 
 Our **high-performance tasklets system** focuses on maximum efficiency and ease of use:
 
-- **🚀 Zero-overhead execution** - Direct C++ binding with minimal JavaScript layer
-- **⚡ Promise-native API** - Modern async/await support with intelligent error handling
-- **🎯 Smart defaults** - Works out of the box with automatic thread pool sizing
-- **📊 Built-in monitoring** - Real-time statistics and health monitoring
-- **🔧 Configurable behavior** - Fine-tune performance for your specific needs
-- **🤖 Automated adaptation** - Intelligent runtime optimization based on performance metrics
+- **Zero-overhead execution** - Direct C++ binding with minimal JavaScript layer
+- **Promise-native API** - Modern async/await support with intelligent error handling
+- **Smart defaults** - Works out of the box with automatic thread pool sizing
+- **Built-in monitoring** - Real-time statistics and health monitoring
+- **Configurable behavior** - Fine-tune performance for your specific needs
+- **Automated adaptation** - Intelligent runtime optimization based on performance metrics
 
 ## **Performance & Use Cases**
 
@@ -434,11 +434,11 @@ The auto-scheduler intelligently:
 
 ### Version 1.0.0 Highlights
 
-1. **🎯 Simplified API** - Modern Promise-based interface with 80% less boilerplate
-2. **⚡ Performance boost** - Optimized native bindings with reduced overhead
-3. **📊 Enhanced monitoring** - Built-in health checks and comprehensive statistics
-4. **🔧 Smart configuration** - Auto-detecting optimal settings for your hardware
-5. **📝 TypeScript-first** - Complete type definitions with intelligent inference
+1. **Simplified API** - Modern Promise-based interface with 80% less boilerplate
+2. **Performance boost** - Optimized native bindings with reduced overhead
+3. **Enhanced monitoring** - Built-in health checks and comprehensive statistics
+4. **Smart configuration** - Auto-detecting optimal settings for your hardware
+5. **TypeScript-first** - Complete type definitions with intelligent inference
 
 ### **Breaking Changes from 0.x**
 
@@ -459,11 +459,11 @@ const result = await tasklets.run(() => heavyWork());
 ```
 
 **Migration benefits:**
-- ✅ **90% less code** for common operations
-- ✅ **Zero manual memory management** 
-- ✅ **Built-in error handling** and timeouts
-- ✅ **Promise-native** with async/await support
-- ✅ **TypeScript-ready** with full type inference
+- **90% less code** for common operations
+- **Zero manual memory management** 
+- **Built-in error handling** and timeouts
+- **Promise-native** with async/await support
+- **TypeScript-ready** with full type inference
 
 ## Documentation
 
@@ -485,7 +485,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## Support
 
-- 📧 Email: jacksonwendel@gmail.com
-- 💬 Discord: [Join our community](https://discord.gg/tasklets)
-- 🐛 Issues: [GitHub Issues](https://github.com/wendelmax/tasklets/issues)
-- 📖 Documentation: [Full Documentation](https://docs.tasklets.dev) 
+- Email: jacksonwendel@gmail.com
+- Discord: [Join our community](https://discord.gg/tasklets)
+- Issues: [GitHub Issues](https://github.com/wendelmax/tasklets/issues)
+- Documentation: [Full Documentation](https://docs.tasklets.dev) 

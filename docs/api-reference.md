@@ -6,209 +6,147 @@ Tasklets provides a unified, intelligent API for parallel task execution that au
 
 ## Core API
 
-### `run(task | tasks | count, task)`
+### `run(taskFunction, options?)`
 
-The unified execution API that automatically detects and optimizes the execution strategy based on the input.
+Execute a single task and wait for completion.
 
-#### Single Task Execution
 ```javascript
 const result = await tasklets.run(() => {
-    return 'Hello from task!';
+  return 'Hello from task!';
 });
 ```
 
-**Returns:**
-```javascript
-{
-    success: true,
-    data: "Hello from task!",
-    error: "",
-    taskId: BigInt(123),
-    type: "single"
-}
-```
+**Returns:** The result of the task function directly.
 
-#### Array of Tasks (Auto-batch)
+### `runAll(tasks, options?)`
+
+Execute multiple tasks in parallel.
+
 ```javascript
-const results = await tasklets.run([
-    () => 'Task 1 completed',
-    () => 'Task 2 completed',
-    () => 'Task 3 completed'
+const results = await tasklets.runAll([
+  () => 'Task 1 completed',
+  () => 'Task 2 completed',
+  () => 'Task 3 completed'
 ]);
 ```
 
-**Returns:**
-```javascript
-{
-    success: true,
-    totalTasks: 3,
-    successfulTasks: 3,
-    failedTasks: 0,
-    results: ["Task 1 completed", "Task 2 completed", "Task 3 completed"],
-    errors: ["", "", ""],
-    taskIds: [BigInt(123), BigInt(124), BigInt(125)],
-    type: "array"
-}
-```
+**Returns:** Array of results from all tasks.
 
-#### Batch with Count (Auto-batch)
+### `batch(taskConfigs, options?)`
+
+Execute tasks in batch with progress tracking.
+
 ```javascript
-const batchResults = await tasklets.run(1000, (index) => {
-    return `Task ${index}: ${Math.pow(index, 2)}`;
+const results = await tasklets.batch([
+  { name: 'task1', task: () => 'Result 1' },
+  { name: 'task2', task: () => 'Result 2' },
+  { name: 'task3', task: () => 'Result 3' }
+], {
+  progress: (completed, total, name) => {
+    console.log(`Progress: ${completed}/${total} - ${name}`);
+  }
 });
 ```
 
-**Returns:**
+**Returns:** Array of results with task names.
+
+### `getStats()`
+
+Get basic system statistics.
+
 ```javascript
-{
-    success: true,
-    totalTasks: 1000,
-    successfulTasks: 1000,
-    failedTasks: 0,
-    results: ["Task 0: 0", "Task 1: 1", "Task 2: 4", ...],
-    errors: ["", "", "", ...],
-    taskIds: [BigInt(123), BigInt(124), BigInt(125), ...],
-    type: "batch"
-}
+const stats = tasklets.getStats();
 ```
 
-### `getSystemInfo()`
+**Returns:** Object with basic performance statistics.
 
-Get comprehensive system information and statistics.
+### `getHealth()`
+
+Get system health information.
 
 ```javascript
-const info = await tasklets.getSystemInfo();
+const health = tasklets.getHealth();
 ```
 
-**Returns:**
+**Returns:** Object with system health status.
+
+### `getDetailedStats()`
+
+Get comprehensive system statistics.
+
 ```javascript
-{
-    cpuCores: 8,
-    threadPoolSize: 8,
-    memoryUsage: "45.2 MB",
-    activeTasks: 0,
-    completedTasks: 1500,
-    failedTasks: 3,
-    status: {
-        memory_manager_initialized: true,
-        auto_config_initialized: true,
-        auto_scheduler_initialized: true,
-        multiprocessor_initialized: true,
-        active_tasklets: 0,
-        worker_threads: 8,
-        memory_usage_percent: 12.5,
-        cpu_utilization: 15.2
-    },
-    memory: {
-        active_tasklets: 0,
-        total_created: 1500,
-        memory_usage_mb: 45.2,
-        system_memory_percent: 12.5
-    },
-    threadPool: {
-        worker_threads: 8,
-        active_jobs: 0,
-        completed_jobs: 1500,
-        failed_jobs: 3,
-        jobs_per_second: 1250.5
-    },
-    autoConfig: {
-        enabled: true,
-        recommendedWorkerCount: 8,
-        shouldScaleUp: false,
-        shouldScaleDown: false,
-        workerScalingConfidence: 0.85,
-        recommendedMemoryLimitPercent: 80.0,
-        shouldAdjustMemory: false,
-        memoryConfidence: 0.92,
-        recommendedTimeoutMs: 30000,
-        shouldAdjustTimeout: false,
-        timeoutConfidence: 0.78
-    },
-    autoScheduler: {
-        enabled: true,
-        recommendedWorkerCount: 8,
-        shouldScaleUp: false,
-        shouldScaleDown: false,
-        workerScalingConfidence: 0.85,
-        recommendedTimeoutMs: 30000,
-        shouldAdjustTimeout: false,
-        timeoutConfidence: 0.78,
-        recommendedPriority: 0,
-        shouldAdjustPriority: false,
-        priorityConfidence: 0.65,
-        recommendedBatchSize: 1000,
-        shouldBatch: true,
-        batchingConfidence: 0.95,
-        shouldRebalance: false,
-        loadBalanceConfidence: 0.88
-    },
-    multiprocessor: {
-        enabled: true,
-        optimalThreadCount: 8,
-        processCount: 8,
-        totalOperations: 5000,
-        successfulOperations: 4980,
-        failedOperations: 20,
-        averageProcessingTimeMs: 15.2,
-        totalProcessingTimeMs: 76000,
-        operationsPerSecond: 65.8
-    }
-}
+const stats = tasklets.getDetailedStats();
 ```
 
-## Advanced Configuration APIs
+**Returns:** Object with detailed performance metrics.
 
-### `getAutoConfigRecommendations()`
+## Configuration APIs
 
-Get intelligent auto-configuration recommendations based on current system performance.
+### `configure(options)`
+
+Configure tasklets with various options.
 
 ```javascript
-const recommendations = await tasklets.getAutoConfigRecommendations();
+tasklets.configure({
+  workers: 4,
+  timeout: 30000,
+  logging: 'info'
+});
 ```
 
-**Returns:**
+### `config(options)`
+
+Alias for configure method.
+
 ```javascript
-{
-    recommendedWorkerCount: 8,
-    shouldScaleUp: false,
-    shouldScaleDown: false,
-    workerScalingConfidence: 0.85,
-    recommendedMemoryLimitPercent: 80.0,
-    shouldAdjustMemory: false,
-    memoryConfidence: 0.92,
-    recommendedTimeoutMs: 30000,
-    shouldAdjustTimeout: false,
-    timeoutConfidence: 0.78
-}
+tasklets.config({
+  workers: 'auto',
+  timeout: 10000
+});
 ```
 
-### `getAutoSchedulerRecommendations()`
+### `setWorkerThreadCount(count)`
 
-Get auto-scheduler recommendations for optimal task execution.
+Set the number of worker threads.
 
 ```javascript
-const schedulerRecs = await tasklets.getAutoSchedulerRecommendations();
+tasklets.setWorkerThreadCount(8);
 ```
 
-**Returns:**
+### `getWorkerThreadCount()`
+
+Get the current number of worker threads.
+
 ```javascript
-{
-    recommendedWorkerCount: 8,
-    shouldScaleUp: false,
-    shouldScaleDown: false,
-    workerScalingConfidence: 0.85,
-    recommendedTimeoutMs: 30000,
-    shouldAdjustTimeout: false,
-    timeoutConfidence: 0.78,
-    recommendedPriority: 0,
-    shouldAdjustPriority: false,
-    priorityConfidence: 0.65,
-    recommendedBatchSize: 1000,
-    shouldBatch: true,
-    batchingConfidence: 0.95,
-    shouldRebalance: false,
-    loadBalanceConfidence: 0.88
+const count = tasklets.getWorkerThreadCount();
+```
+
+### `setLogLevel(level)`
+
+Set the logging level.
+
+```javascript
+tasklets.setLogLevel('info');
+```
+
+### `getLogLevel()`
+
+Get the current logging level.
+
+```javascript
+const level = tasklets.getLogLevel();
+```
+  recommendedTimeoutMs: 30000,
+  shouldAdjustTimeout: false,
+  timeoutConfidence: 0.78,
+  recommendedPriority: 0,
+  shouldAdjustPriority: false,
+  priorityConfidence: 0.65,
+  recommendedBatchSize: 1000,
+  shouldBatch: true,
+  batchingConfidence: 0.95,
+  shouldRebalance: false,
+  loadBalanceConfidence: 0.88
 }
 ```
 
@@ -223,9 +161,9 @@ const result = await tasklets.forceOptimization();
 **Returns:**
 ```javascript
 {
-    success: true,
-    message: "Optimization analysis completed",
-    timestamp: 1703123456789
+  success: true,
+  message: "Optimization analysis completed",
+  timestamp: 1703123456789
 }
 ```
 
@@ -242,34 +180,34 @@ const metrics = await tasklets.getPerformanceMetrics();
 **Returns:**
 ```javascript
 {
-    autoConfig: [
-        {
-            timestamp: 1703123456789,
-            cpuUtilization: 45.2,
-            memoryUsagePercent: 12.5,
-            workerCount: 8,
-            activeJobs: 5,
-            completedJobs: 1500,
-            failedJobs: 3,
-            workerUtilization: 0.625,
-            averageExecutionTimeMs: 15.2
-        }
-        // ... more historical data
-    ],
-    autoScheduler: [
-        {
-            timestamp: 1703123456789,
-            cpuUtilization: 45.2,
-            memoryUsagePercent: 12.5,
-            workerCount: 8,
-            activeJobs: 5,
-            completedJobs: 1500,
-            failedJobs: 3,
-            workerUtilization: 0.625,
-            averageExecutionTimeMs: 15.2
-        }
-        // ... more historical data
-    ]
+  autoConfig: [
+  {
+  timestamp: 1703123456789,
+  cpuUtilization: 45.2,
+  memoryUsagePercent: 12.5,
+  workerCount: 8,
+  activeJobs: 5,
+  completedJobs: 1500,
+  failedJobs: 3,
+  workerUtilization: 0.625,
+  averageExecutionTimeMs: 15.2
+  }
+  // ... more historical data
+  ],
+  autoScheduler: [
+  {
+  timestamp: 1703123456789,
+  cpuUtilization: 45.2,
+  memoryUsagePercent: 12.5,
+  workerCount: 8,
+  activeJobs: 5,
+  completedJobs: 1500,
+  failedJobs: 3,
+  workerUtilization: 0.625,
+  averageExecutionTimeMs: 15.2
+  }
+  // ... more historical data
+  ]
 }
 ```
 
@@ -284,9 +222,9 @@ const pattern = await tasklets.getWorkloadPattern();
 **Returns:**
 ```javascript
 {
-    pattern: "CPU_INTENSIVE", // CPU_INTENSIVE, IO_INTENSIVE, MEMORY_INTENSIVE, MIXED
-    description: "CPU-intensive workload detected",
-    timestamp: 1703123456789
+  pattern: "CPU_INTENSIVE", // CPU_INTENSIVE, IO_INTENSIVE, MEMORY_INTENSIVE, MIXED
+  description: "CPU-intensive workload detected",
+  timestamp: 1703123456789
 }
 ```
 
@@ -301,15 +239,15 @@ const stats = await tasklets.getMultiprocessorStats();
 **Returns:**
 ```javascript
 {
-    enabled: true,
-    optimalThreadCount: 8,
-    processCount: 8,
-    totalOperations: 5000,
-    successfulOperations: 4980,
-    failedOperations: 20,
-    averageProcessingTimeMs: 15.2,
-    totalProcessingTimeMs: 76000,
-    operationsPerSecond: 65.8
+  enabled: true,
+  optimalThreadCount: 8,
+  processCount: 8,
+  totalOperations: 5000,
+  successfulOperations: 4980,
+  failedOperations: 20,
+  averageProcessingTimeMs: 15.2,
+  totalProcessingTimeMs: 76000,
+  operationsPerSecond: 65.8
 }
 ```
 
@@ -322,7 +260,7 @@ Spawn a single task without waiting.
 
 ```javascript
 const taskId = tasklets.spawn(() => {
-    return 'Task result';
+  return 'Task result';
 });
 ```
 
@@ -352,7 +290,7 @@ Create a batch of tasks.
 
 ```javascript
 const taskIds = tasklets.batch(1000, (index) => {
-    return `Task ${index} result`;
+  return `Task ${index} result`;
 });
 ```
 
@@ -376,11 +314,11 @@ All APIs provide comprehensive error handling:
 
 ```javascript
 try {
-    const result = await tasklets.run(() => {
-        throw new Error('Task failed');
-    });
+  const result = await tasklets.run(() => {
+  throw new Error('Task failed');
+  });
 } catch (error) {
-    console.error('Task execution failed:', error.message);
+  console.error('Task execution failed:', error.message);
 }
 ```
 
@@ -388,9 +326,9 @@ For batch operations with mixed results:
 
 ```javascript
 const batchResult = await tasklets.run([
-    () => 'Success',
-    () => { throw new Error('Failed'); },
-    () => 'Another success'
+  () => 'Success',
+  () => { throw new Error('Failed'); },
+  () => 'Another success'
 ]);
 
 console.log('Successful tasks:', batchResult.successfulTasks);

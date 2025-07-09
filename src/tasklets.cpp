@@ -65,8 +65,8 @@ T clamp_float(T val, T min, T max, T def) {
  struct JSContext {
      Napi::ThreadSafeFunction tsfn;
      Napi::Reference<Napi::Value> result_ref;
-     std::string result_string;
-     std::string error_string;
+     std::string result_string{ "" };
+     std::string error_string{ "" };
      bool has_error;
      bool completed;
      std::mutex completion_mutex;

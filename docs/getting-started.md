@@ -6,7 +6,7 @@ Welcome to Tasklets! This guide will help you get up and running with high-perfo
 
 Tasklets are lightweight, cooperative tasks that provide true parallelism for CPU-intensive operations using a native C++ thread pool. This prevents heavy computations from blocking the main Node.js event loop.
 
-##  **Why Choose Tasklets?**
+## Why Choose Tasklets?
 
 - **Simple API**: An easy-to-use, Promise-based API with `await`.
 - **High Performance**: Offload heavy work to a native C++ thread pool for maximum speed.
@@ -39,7 +39,7 @@ On Windows:
 npm install --global windows-build-tools
 ```
 
-##  **Your First Tasklet**
+## Your First Tasklet
 
 The easiest way to use tasklets is with the `run` function, which returns a Promise.
 
@@ -53,7 +53,7 @@ async function main() {
     // This code runs in a worker thread
     let sum = 0;
     for (let i = 0; i <= 100000000; i++) {
-        sum += i;
+      sum += i;
     }
     return sum;
   });
@@ -64,7 +64,7 @@ async function main() {
 main();
 ```
 
-##  **Configuration**
+## Configuration
 
 You can configure certain aspects of the library, such as logging.
 
@@ -80,7 +80,7 @@ tasklets.config({
 const result = await tasklets.run(() => 'My Task');
 ```
 
-##  **Error Handling**
+## Error Handling
 
 Errors are handled automatically using standard `try...catch` blocks with Promises.
 
@@ -88,23 +88,23 @@ Errors are handled automatically using standard `try...catch` blocks with Promis
 const tasklets = require('tasklets');
 
 async function main() {
-    try {
-      const result = await tasklets.run(() => {
-        if (Math.random() > 0.5) {
-          throw new Error('This task failed randomly!');
-        }
-        return 'Success';
-      });
-      console.log('Result:', result);
-    } catch (error) {
-      console.error('Task failed:', error.message);
-    }
+  try {
+    const result = await tasklets.run(() => {
+      if (Math.random() > 0.5) {
+        throw new Error('This task failed randomly!');
+      }
+      return 'Success';
+    });
+    console.log('Result:', result);
+  } catch (error) {
+    console.error('Task failed:', error.message);
+  }
 }
 
 main();
 ```
 
-##  **Monitoring**
+## Monitoring
 
 You can get performance statistics and health information from the library.
 
@@ -143,9 +143,9 @@ tasklets.join(taskId); // This will block until the task is done
 
 const status = tasklets.getStatus(taskId);
 if (status.hasError) {
-    console.error('Task failed:', status.error);
+  console.error('Task failed:', status.error);
 } else {
-    console.log('Task succeeded:', status.result);
+  console.log('Task succeeded:', status.result);
 }
 ```
 

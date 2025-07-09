@@ -2,7 +2,7 @@
 
 This document outlines critical improvements needed based on test results, benchmarks, and architectural analysis.
 
-## 🚨 Critical Issues (High Priority)
+## Critical Issues (High Priority)
 
 ### 1. Native Module Result Handling
 **Problem:** JavaScript tasks don't return actual computed values, only "Task completed successfully"
@@ -189,13 +189,13 @@ stream.end();
 // I/O-specific configuration
 tasklets.config({
   io: {
-    pools: {
-      file: { workers: 4, priority: 'low' },
-      network: { workers: 8, priority: 'high' },
-      database: { workers: 2, priority: 'medium' }
-    },
-    async: true,
-    nonBlocking: true
+  pools: {
+  file: { workers: 4, priority: 'low' },
+  network: { workers: 8, priority: 'high' },
+  database: { workers: 2, priority: 'medium' }
+  },
+  async: true,
+  nonBlocking: true
   }
 });
 ```
@@ -227,10 +227,10 @@ tasklets.autoConfigure({
 // Backpressure configuration
 tasklets.config({
   backpressure: {
-    strategy: 'drop', // 'drop', 'buffer', 'block'
-    bufferSize: 1000,
-    timeout: 5000,
-    onOverflow: (task) => console.warn('Task dropped due to backpressure')
+  strategy: 'drop', // 'drop', 'buffer', 'block'
+  bufferSize: 1000,
+  timeout: 5000,
+  onOverflow: (task) => console.warn('Task dropped due to backpressure')
   }
 });
 ```
@@ -404,7 +404,7 @@ A more advanced method for executing tasks in batches with progress tracking.
 ```javascript
 const results = await tasklets.batch(largeTaskList, {
   onProgress: (progress) => {
-    console.log(`Progress: ${progress.percentage}%`);
+  console.log(`Progress: ${progress.percentage}%`);
   }
 });
 ```
