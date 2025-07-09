@@ -23,7 +23,9 @@
     "build:prebuilds:linux": "prebuildify --platform=linux --arch=x64 --target=18.0.0 --strip",
     "build:prebuilds:macos": "prebuildify --platform=darwin --arch=x64 --target=18.0.0 --strip",
     "build:prebuilds:windows": "prebuildify --platform=win32 --arch=x64 --target=18.0.0 --strip",
-    "test": "jest",
+    "test": "jest --forceExit",
+    "test:typescript": "ts-node test-typescript.ts",
+    "test:all": "npm test && npm run test:typescript",
     "test:stress": "node test/stress/1m-tasklets.js",
     "test:cctest": "npm run build:cctest && ./build/Release/cctest",
     "test:cctest:verbose": "npm run build:cctest && ./build/Release/cctest -v",
@@ -36,13 +38,14 @@
     "prepublishOnly": "npm run test && npm run build:prebuilds",
     "package": "npm pack",
     "package:test": "npm-pack-test",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch --forceExit",
+    "test:coverage": "jest --coverage --forceExit",
     "bench": "npm run bench:run && npm run bench:runAll && npm run bench:batch && npm run bench:overhead",
     "bench:run": "node benches/run.js",
     "bench:runAll": "node benches/runAll.js",
     "bench:batch": "node benches/batch.js",
-    "bench:overhead": "node benches/overhead.js"
+    "bench:overhead": "node benches/overhead.js",
+    "bench:fastmode": "node benches/fastmode.js"
   },
   "keywords": [
     "tasklets",
@@ -65,14 +68,15 @@
     "node-addon-api": "^7.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.19.5",
     "benchmark": "^2.1.4",
     "jest": "^29.7.0",
     "microtime": "^3.1.1",
     "node-gyp": "^10.0.1",
     "npm-pack-test": "^1.0.0",
     "prebuildify": "^5.0.0",
-    "typescript": "^5.3.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,11 +1,22 @@
+/**
+ * @file cryptography.js
+ * @description This example demonstrates how to perform various cryptographic operations in parallel using Tasklets.
+ * It includes examples of:
+ * - Hashing data with multiple algorithms (MD5, SHA1, SHA256, etc.).
+ * - Generating RSA key pairs of different sizes and using them for encryption and decryption.
+ * - Generating AES keys and using them for symmetric encryption and decryption.
+ * - Simulating a brute-force password cracking attempt to showcase a long-running task.
+ * The `tasklets.runAll` function is utilized to offload these CPU-intensive cryptographic tasks from the main thread,
+ * improving application responsiveness and performance.
+ */
 const tasklets = require('../../lib/tasklets');
 const crypto = require('crypto');
 
 (async () => {
-console.log('Tasklets - Cryptography Examples\n');
+  console.log('Tasklets - Cryptography Examples\n');
 
 // Cryptographic utility functions
-class CryptoUtils {
+  class CryptoUtils {
   // Generate random bytes
   static generateRandomBytes(length) {
   return crypto.randomBytes(length);
@@ -129,22 +140,22 @@ class CryptoUtils {
   const length = password.length;
   return Math.log2(Math.pow(charsetSize, length));
   }
-}
+  }
 
 // Example 1: Parallel hashing with different algorithms
-console.log('1. Parallel Hashing with Multiple Algorithms:');
-const testData = [
+  console.log('1. Parallel Hashing with Multiple Algorithms:');
+  const testData = [
   'Hello, World!',
   'This is a test message for cryptography',
   'Another sample text for hashing demonstration',
   'Cryptographic hash functions are essential for security',
   'Tasklets enable parallel cryptographic operations'
-];
+  ];
 
-const hashAlgorithms = ['md5', 'sha1', 'sha256', 'sha512', 'ripemd160'];
+  const hashAlgorithms = ['md5', 'sha1', 'sha256', 'sha512', 'ripemd160'];
 
-const hashResults = await tasklets.runAll(
-  testData.flatMap(data => 
+  const hashResults = await tasklets.runAll(
+  testData.flatMap(data =>
   hashAlgorithms.map(algorithm => () => {
   console.log(`  Hashing "${data.substring(0, 20)}..." with ${algorithm.toUpperCase()}`);
 
@@ -165,19 +176,19 @@ const hashResults = await tasklets.runAll(
   };
   })
   )
-);
+  );
 
-console.log('  Hashing results:');
-hashResults.forEach(result => {
+  console.log('  Hashing results:');
+  hashResults.forEach(result => {
   console.log(`  ${result.algorithm}: ${result.hash} (${result.processingTime}ms)`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 2: RSA key generation and encryption
-console.log('2. RSA Key Generation and Encryption:');
-const rsaKeySizes = [1024, 2048, 3072, 4096];
+  console.log('2. RSA Key Generation and Encryption:');
+  const rsaKeySizes = [1024, 2048, 3072, 4096];
 
-const rsaResults = await tasklets.runAll(rsaKeySizes.map((keySize, index) => async () => {
+  const rsaResults = await tasklets.runAll(rsaKeySizes.map((keySize, index) => async () => {
   console.log(`  Generating ${keySize}-bit RSA key pair...`);
 
   const startTime = Date.now();
@@ -197,26 +208,26 @@ const rsaResults = await tasklets.runAll(rsaKeySizes.map((keySize, index) => asy
   encryptionSuccess: decrypted === testMessage,
   encryptedLength: encrypted.length
   };
-}));
+  }));
 
-console.log('  RSA results:');
-rsaResults.forEach(result => {
+  console.log('  RSA results:');
+  rsaResults.forEach(result => {
   console.log(`  ${result.keySize}-bit: ${result.generationTime}ms, success: ${result.encryptionSuccess}`);
   console.log(`  Public key: ${result.publicKeyLength} chars, Encrypted: ${result.encryptedLength} chars`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 3: AES encryption with different key sizes
-console.log('3. AES Encryption with Different Key Sizes:');
-const aesKeySizes = [16, 24, 32]; // 128, 192, 256 bits
-const testMessages = [
+  console.log('3. AES Encryption with Different Key Sizes:');
+  const aesKeySizes = [16, 24, 32]; // 128, 192, 256 bits
+  const testMessages = [
   'Short message',
   'This is a longer message for testing AES encryption with virtual threads',
   'Very long message that will be encrypted using different AES key sizes to demonstrate the capabilities of virtual threads in cryptographic operations'
-];
+  ];
 
-const aesResults = await tasklets.runAll(
-  aesKeySizes.flatMap((keySize, keySizeIndex) => 
+  const aesResults = await tasklets.runAll(
+  aesKeySizes.flatMap((keySize, keySizeIndex) =>
   testMessages.map((message, messageIndex) => async () => {
   console.log(`  Encrypting message with ${keySize * 8}-bit AES...`);
 
@@ -235,21 +246,21 @@ const aesResults = await tasklets.runAll(
   };
   })
   )
-);
+  );
 
-console.log('  AES results:');
-aesResults.forEach(result => {
+  console.log('  AES results:');
+  aesResults.forEach(result => {
   console.log(`  ${result.keySize}-bit: ${result.processingTime}ms, success: ${result.success}`);
   console.log(`  Message: ${result.messageLength} chars, Encrypted: ${result.encryptedLength} chars`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 4: Password security analysis
-console.log('4. Password Security Analysis:');
-const passwordCount = 1000;
+  console.log('4. Password Security Analysis:');
+  const passwordCount = 1000;
 
-const passwordResults = await tasklets.runAll(
-  Array.from({ length: passwordCount }, (_, index) => async () => {
+  const passwordResults = await tasklets.runAll(
+  Array.from({length: passwordCount}, (_, index) => async () => {
   const password = CryptoUtils.generateSecurePassword(8 + Math.floor(Math.random() * 12));
   const entropy = CryptoUtils.calculateEntropy(password);
   const hash = CryptoUtils.hash(password);
@@ -266,29 +277,29 @@ const passwordResults = await tasklets.runAll(
   strength: entropy > 50 ? 'Strong' : entropy > 30 ? 'Medium' : 'Weak'
   };
   })
-);
+  );
 
 // Analyze password strength distribution
-const strengthCounts = passwordResults.reduce((acc, result) => {
+  const strengthCounts = passwordResults.reduce((acc, result) => {
   acc[result.strength] = (acc[result.strength] || 0) + 1;
   return acc;
-}, {});
+  }, {});
 
-const avgEntropy = passwordResults.reduce((sum, result) => sum + parseFloat(result.entropy), 0) / passwordCount;
+  const avgEntropy = passwordResults.reduce((sum, result) => sum + parseFloat(result.entropy), 0) / passwordCount;
 
-console.log('  Password analysis results:');
-console.log(`  Total passwords generated: ${passwordCount}`);
-console.log(`  Average entropy: ${avgEntropy.toFixed(2)} bits`);
-Object.entries(strengthCounts).forEach(([strength, count]) => {
+  console.log('  Password analysis results:');
+  console.log(`  Total passwords generated: ${passwordCount}`);
+  console.log(`  Average entropy: ${avgEntropy.toFixed(2)} bits`);
+  Object.entries(strengthCounts).forEach(([strength, count]) => {
   console.log(`  ${strength} passwords: ${count} (${(count / passwordCount * 100).toFixed(1)}%)`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 5: Brute force password cracking simulation
-console.log('5. Brute Force Password Cracking Simulation:');
-const testPasswords = ['abc', 'test', '12345', 'password', 'secret'];
+  console.log('5. Brute Force Password Cracking Simulation:');
+  const testPasswords = ['abc', 'test', '12345', 'password', 'secret'];
 
-const crackResults = await tasklets.runAll(
+  const crackResults = await tasklets.runAll(
   testPasswords.map((password, index) => async () => {
   console.log(`  Attempting to crack password: "${password}"`);
 
@@ -304,32 +315,34 @@ const crackResults = await tasklets.runAll(
   attemptsPerSecond: Math.floor(result.attempts / (totalTime / 1000))
   };
   })
-);
+  );
 
-console.log('  Password cracking results:');
-crackResults.forEach(result => {
+  console.log('  Password cracking results:');
+  crackResults.forEach(result => {
   if (result.found) {
   console.log(`  "${result.target}": CRACKED in ${result.time}ms (${result.attempts} attempts)`);
   } else {
   console.log(`  "${result.target}": Not cracked (${result.attempts} attempts, ${result.attemptsPerSecond}/sec)`);
   }
-});
-console.log();
+  });
+  console.log();
 
 // Example 6: Cryptographic performance benchmarking
-console.log('6. Cryptographic Performance Benchmarking:');
-const benchmarkOperations = [
-  { name: 'SHA-256 Hashing', count: 10000, fn: () => CryptoUtils.hash('test data') },
-  { name: 'MD5 Hashing', count: 10000, fn: () => CryptoUtils.hash('test data', 'md5') },
-  { name: 'Random Bytes Generation', count: 1000, fn: () => CryptoUtils.generateRandomBytes(1024) },
-  { name: 'AES Encryption', count: 1000, fn: () => {
+  console.log('6. Cryptographic Performance Benchmarking:');
+  const benchmarkOperations = [
+  {name: 'SHA-256 Hashing', count: 10000, fn: () => CryptoUtils.hash('test data')},
+  {name: 'MD5 Hashing', count: 10000, fn: () => CryptoUtils.hash('test data', 'md5')},
+  {name: 'Random Bytes Generation', count: 1000, fn: () => CryptoUtils.generateRandomBytes(1024)},
+  {
+  name: 'AES Encryption', count: 1000, fn: () => {
   const key = CryptoUtils.generateAESKey();
   return CryptoUtils.encryptAES('test message', key);
-  }},
-  { name: 'Password Generation', count: 5000, fn: () => CryptoUtils.generateSecurePassword() }
-];
+  }
+  },
+  {name: 'Password Generation', count: 5000, fn: () => CryptoUtils.generateSecurePassword()}
+  ];
 
-const benchmarkThreads = tasklets.spawnMany(benchmarkOperations.length, async (index) => {
+  const benchmarkThreads = tasklets.spawnMany(benchmarkOperations.length, async (index) => {
   const operation = benchmarkOperations[index];
   console.log(`  Benchmarking ${operation.name}...`);
 
@@ -351,53 +364,53 @@ const benchmarkThreads = tasklets.spawnMany(benchmarkOperations.length, async (i
   operationsPerSecond: Math.floor(operation.count / (totalTime / 1000)),
   averageTime: totalTime / operation.count
   };
-});
+  });
 
-const benchmarkResults = await tasklets.joinMany(benchmarkThreads);
+  const benchmarkResults = await tasklets.joinMany(benchmarkThreads);
 
-console.log('  Benchmark results:');
-benchmarkResults.forEach(result => {
+  console.log('  Benchmark results:');
+  benchmarkResults.forEach(result => {
   console.log(`  ${result.operation}:`);
   console.log(`  ${result.count} operations in ${result.totalTime}ms`);
   console.log(`  ${result.operationsPerSecond} ops/sec, ${result.averageTime.toFixed(2)}ms avg`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 7: Memory and performance analysis
-console.log('7. Memory and Performance Analysis:');
-const finalStats = tasklets.getStats();
+  console.log('7. Memory and Performance Analysis:');
+  const finalStats = tasklets.getStats();
 
-console.log('  Virtual threads performance:');
-console.log(`  Total fibers created: ${finalStats.totalFibers}`);
-console.log(`  Active fibers: ${finalStats.activeFibers}`);
-console.log(`  Total execution time: ${finalStats.totalExecutionTimeMs}ms`);
+  console.log('  Virtual threads performance:');
+  console.log(`  Total fibers created: ${finalStats.totalFibers}`);
+  console.log(`  Active fibers: ${finalStats.activeFibers}`);
+  console.log(`  Total execution time: ${finalStats.totalExecutionTimeMs}ms`);
 
 // Calculate cryptographic operations per second
-const totalCryptoOps = hashResults.length + rsaResults.length + aesResults.length + 
+  const totalCryptoOps = hashResults.length + rsaResults.length + aesResults.length +
   passwordResults.length + crackResults.length + benchmarkResults.length;
 
-console.log(`  Total cryptographic operations: ${totalCryptoOps}`);
-console.log(`  Operations per fiber: ${(totalCryptoOps / finalStats.totalFibers).toFixed(2)}`);
-console.log(`  Fibers per second: ${(finalStats.totalFibers / (finalStats.totalExecutionTimeMs / 1000)).toFixed(1)}`);
+  console.log(`  Total cryptographic operations: ${totalCryptoOps}`);
+  console.log(`  Operations per fiber: ${(totalCryptoOps / finalStats.totalFibers).toFixed(2)}`);
+  console.log(`  Fibers per second: ${(finalStats.totalFibers / (finalStats.totalExecutionTimeMs / 1000)).toFixed(1)}`);
 
 // Memory usage estimation
-const estimatedMemoryPerThread = 65536; // 64KB
-const totalMemoryUsed = finalStats.totalFibers * estimatedMemoryPerThread;
-console.log(`  Estimated memory used: ${(totalMemoryUsed / 1024 / 1024).toFixed(2)}MB`);
+  const estimatedMemoryPerThread = 65536; // 64KB
+  const totalMemoryUsed = finalStats.totalFibers * estimatedMemoryPerThread;
+  console.log(`  Estimated memory used: ${(totalMemoryUsed / 1024 / 1024).toFixed(2)}MB`);
 
 // Security analysis
-console.log('\nSecurity Analysis:');
-console.log(`  Strong passwords generated: ${strengthCounts.Strong || 0}`);
-console.log(`  Average password entropy: ${avgEntropy.toFixed(2)} bits`);
-console.log(`  Password cracking success rate: ${(crackResults.filter(r => r.found).length / crackResults.length * 100).toFixed(1)}%`);
+  console.log('\nSecurity Analysis:');
+  console.log(`  Strong passwords generated: ${strengthCounts.Strong || 0}`);
+  console.log(`  Average password entropy: ${avgEntropy.toFixed(2)} bits`);
+  console.log(`  Password cracking success rate: ${(crackResults.filter(r => r.found).length / crackResults.length * 100).toFixed(1)}%`);
 
-console.log('\nKey benefits demonstrated:');
-console.log('  • Parallel cryptographic operations');
-console.log('  • CPU-intensive security computations');
-console.log('  • Efficient key generation and encryption');
-console.log('  • Scalable password analysis');
-console.log('  • Real-time security benchmarking');
-console.log('  • Memory-efficient cryptographic processing\n');
+  console.log('\nKey benefits demonstrated:');
+  console.log('  • Parallel cryptographic operations');
+  console.log('  • CPU-intensive security computations');
+  console.log('  • Efficient key generation and encryption');
+  console.log('  • Scalable password analysis');
+  console.log('  • Real-time security benchmarking');
+  console.log('  • Memory-efficient cryptographic processing\n');
 
-console.log('Cryptography example completed!');
+  console.log('Cryptography example completed!');
 })(); 

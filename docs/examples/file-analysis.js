@@ -1,3 +1,15 @@
+/**
+ * @file file-analysis.js
+ * @description This example demonstrates how to use Tasklets for parallel file analysis.
+ * It performs the following steps:
+ * 1. Generates a set of sample files with different extensions (.txt, .js, .json, .md, .log).
+ * 2. Reads and analyzes each file in parallel using `tasklets.runAll()`.
+ * 3. The analysis includes basic stats (size, line count, word count) and type-specific analysis
+ *  (e.g., function count for JS, validation for JSON).
+ * 4. After the analysis, it generates overall statistics for the analyzed files, also in parallel.
+ * This example is useful for understanding how to offload I/O-bound and CPU-bound tasks
+ * related to file system operations.
+ */
 const tasklets = require('../../lib/tasklets');
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +19,7 @@ console.log('Tasklets - File Analysis Example\n');
 // Generate sample files for testing
 function generateSampleFiles(directory, count = 10) {
   if (!fs.existsSync(directory)) {
-  fs.mkdirSync(directory, { recursive: true });
+  fs.mkdirSync(directory, {recursive: true});
   }
 
   const fileTypes = ['.txt', '.js', '.json', '.md', '.log'];
@@ -26,7 +38,7 @@ function generateSampleFiles(directory, count = 10) {
   content = JSON.stringify({
   id: i + 1,
   name: `Sample ${i + 1}`,
-  data: Array.from({ length: 10 }, (_, j) => ({ key: `value_${j}`, number: Math.random() * 100 })),
+  data: Array.from({length: 10}, (_, j) => ({key: `value_${j}`, number: Math.random() * 100})),
   timestamp: new Date().toISOString()
   }, null, 2);
   } else if (ext === '.js') {
@@ -184,7 +196,7 @@ async function analyzeDirectory(directory) {
   });
   }
 
-  return { successful, failed, totalTime: endTime - startTime };
+  return {successful, failed, totalTime: endTime - startTime};
 }
 
 async function generateStatistics(analysisResults) {
@@ -199,7 +211,7 @@ async function generateStatistics(analysisResults) {
   files.forEach(file => {
   const ext = file.extension || 'no-extension';
   if (!typeStats[ext]) {
-  typeStats[ext] = { count: 0, totalSize: 0, totalLines: 0 };
+  typeStats[ext] = {count: 0, totalSize: 0, totalLines: 0};
   }
   typeStats[ext].count++;
   typeStats[ext].totalSize += file.size;
@@ -211,7 +223,7 @@ async function generateStatistics(analysisResults) {
   typeStats[ext].avgLines = typeStats[ext].totalLines / typeStats[ext].count;
   });
 
-  return { category: 'File Type Distribution', data: typeStats };
+  return {category: 'File Type Distribution', data: typeStats};
   },
 
   // Size analysis
@@ -310,7 +322,7 @@ async function generateStatistics(analysisResults) {
   };
   }
 
-  return { category: 'Language-Specific Analysis', data: langStats };
+  return {category: 'Language-Specific Analysis', data: langStats};
   }
   ];
 
@@ -382,7 +394,7 @@ async function generateStatistics(analysisResults) {
 
   // Clean up test files
   if (fs.existsSync(testDirectory)) {
-  fs.rmSync(testDirectory, { recursive: true, force: true });
+  fs.rmSync(testDirectory, {recursive: true, force: true});
   console.log('\nCleaned up test files');
   }
 

@@ -1,3 +1,14 @@
+/**
+ * @file web-scraping.js
+ * @description This example simulates a web scraping scenario using Tasklets to perform tasks in parallel.
+ * It includes demonstrations of:
+ * - A performance comparison between sequential and parallel web scraping.
+ * - A simulation of a large-scale scraping operation.
+ * - Error handling with a retry mechanism for failed requests.
+ * - Post-processing of scraped content in parallel.
+ * The `scrapeUrl` function is a simulation and does not make actual HTTP requests, making it safe to run locally.
+ * This example is useful for understanding how to manage I/O-bound tasks like web scraping.
+ */
 const tasklets = require('../../lib/tasklets');
 
 (async () => {
@@ -13,11 +24,11 @@ const tasklets = require('../../lib/tasklets');
 
   // Simulate different response scenarios
   const scenarios = [
-  { status: 200, title: 'Example Page', size: 15000 },
-  { status: 200, title: 'API Response', size: 2500 },
-  { status: 404, title: 'Not Found', size: 0 },
-  { status: 200, title: 'Data Page', size: 8000 },
-  { status: 500, title: 'Server Error', size: 0 }
+  {status: 200, title: 'Example Page', size: 15000},
+  {status: 200, title: 'API Response', size: 2500},
+  {status: 404, title: 'Not Found', size: 0},
+  {status: 200, title: 'Data Page', size: 8000},
+  {status: 500, title: 'Server Error', size: 0}
   ];
 
   const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
@@ -87,7 +98,7 @@ const tasklets = require('../../lib/tasklets');
 
   // Example 3: Large-scale scraping simulation
   console.log('3. Large-scale scraping simulation:');
-  const largeUrlList = Array.from({ length: 50 }, (_, i) => 
+  const largeUrlList = Array.from({length: 50}, (_, i) =>
   `https://api.example.com/data/${i}`
   );
 
@@ -127,7 +138,7 @@ const tasklets = require('../../lib/tasklets');
   try {
   const result = await scrapeUrl(url);
   if (result.status === 200) {
-  return { ...result, attempts: attempt };
+  return {...result, attempts: attempt};
   }
   console.log(`  Attempt ${attempt} failed for ${url}: ${result.status}`);
   } catch (error) {
@@ -140,7 +151,7 @@ const tasklets = require('../../lib/tasklets');
   }
   }
 
-  return { url, status: 0, title: 'Failed after retries', size: 0, attempts: maxRetries };
+  return {url, status: 0, title: 'Failed after retries', size: 0, attempts: maxRetries};
   }
 
   const retryResults = await tasklets.runAll(

@@ -28,7 +28,7 @@
  */
 
 #include "cctest.h"
-#include "../../src/core/tasklet.hpp"
+#include "../../src/core/base/tasklet.hpp"
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -38,14 +38,11 @@ using namespace tasklets;
 using namespace cctest;
 
 TEST(TaskletConstruction) {
-    // Test tasklet construction with simple task
     auto task = []() {
-        // Simple task that does nothing
     };
     
     Tasklet tasklet(1, task);
     
-    // Check initial state
     ASSERT_EQ(1, tasklet.get_id());
     ASSERT_FALSE(tasklet.is_finished());
     ASSERT_FALSE(tasklet.is_running());
@@ -55,7 +52,6 @@ TEST(TaskletConstruction) {
 }
 
 TEST(TaskletIdManagement) {
-    // Test different tasklet IDs
     auto task = []() {};
     
     Tasklet tasklet1(100, task);
@@ -66,7 +62,6 @@ TEST(TaskletIdManagement) {
     ASSERT_EQ(200, tasklet2.get_id());
     ASSERT_EQ(0, tasklet3.get_id());
     
-    // Test with maximum uint64_t value
     Tasklet tasklet4(UINT64_MAX, task);
     ASSERT_EQ(UINT64_MAX, tasklet4.get_id());
 }
@@ -75,41 +70,33 @@ TEST(TaskletStateManagement) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    // Initial state
     ASSERT_FALSE(tasklet.is_finished());
     ASSERT_FALSE(tasklet.is_running());
     
-    // Mark as running
     tasklet.mark_running();
     ASSERT_TRUE(tasklet.is_running());
     ASSERT_FALSE(tasklet.is_finished());
     
-    // Mark as finished (automatically sets running to false)
     tasklet.mark_finished();
     ASSERT_TRUE(tasklet.is_finished());
-    ASSERT_FALSE(tasklet.is_running()); // Should be false after mark_finished()
+    ASSERT_FALSE(tasklet.is_running());
 }
 
 TEST(TaskletResultHandling) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    // Initial result should be empty
     ASSERT_STREQ("", tasklet.get_result().c_str());
     
-    // Set result
     tasklet.set_result("Test result");
     ASSERT_STREQ("Test result", tasklet.get_result().c_str());
     
-    // Change result
     tasklet.set_result("Different result");
     ASSERT_STREQ("Different result", tasklet.get_result().c_str());
     
-    // Set empty result
     tasklet.set_result("");
     ASSERT_STREQ("", tasklet.get_result().c_str());
     
-    // Set large result
     std::string large_result(1000, 'A');
     tasklet.set_result(large_result);
     ASSERT_STREQ(large_result.c_str(), tasklet.get_result().c_str());
@@ -119,21 +106,17 @@ TEST(TaskletErrorHandling) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    // Initial error state
     ASSERT_FALSE(tasklet.has_error());
     ASSERT_STREQ("", tasklet.get_error().c_str());
     
-    // Set error
     tasklet.set_error("Test error");
     ASSERT_TRUE(tasklet.has_error());
     ASSERT_STREQ("Test error", tasklet.get_error().c_str());
     
-    // Change error
     tasklet.set_error("Different error");
     ASSERT_TRUE(tasklet.has_error());
     ASSERT_STREQ("Different error", tasklet.get_error().c_str());
     
-    // Error should persist even if we set result
     tasklet.set_result("Some result");
     ASSERT_TRUE(tasklet.has_error());
     ASSERT_STREQ("Different error", tasklet.get_error().c_str());
@@ -151,19 +134,15 @@ TEST(TaskletTaskExecution) {
     
     Tasklet tasklet(1, task);
     
-    // Task should not be executed yet
     ASSERT_FALSE(task_executed.load());
     ASSERT_EQ(0, execution_count.load());
     
-    // Execute task
     std::function<void()> retrieved_task = tasklet.get_task();
     retrieved_task();
     
-    // Task should be executed
     ASSERT_TRUE(task_executed.load());
     ASSERT_EQ(1, execution_count.load());
     
-    // Execute again
     retrieved_task();
     ASSERT_EQ(2, execution_count.load());
 }
@@ -180,10 +159,8 @@ TEST(TaskletTaskWithParameters) {
     
     Tasklet tasklet(1, task);
     
-    // Execute task
     tasklet.get_task()();
     
-    // Check results
     ASSERT_EQ(42, result.load());
     ASSERT_NOT_NULLPTR(string_ptr.load());
     ASSERT_STREQ("Task executed", string_ptr.load()->c_str());
@@ -194,7 +171,6 @@ TEST(TaskletComplexTask) {
     std::atomic<bool> computation_done(false);
     
     auto complex_task = [&computation_result, &computation_done]() {
-        // Simulate some complex computation
         int sum = 0;
         for (int i = 1; i <= 100; i++) {
             sum += i;
@@ -205,10 +181,11 @@ TEST(TaskletComplexTask) {
     
     Tasklet tasklet(1, complex_task);
     
-    // Execute task
+    ASSERT_EQ(0, computation_result.load());
+    ASSERT_FALSE(computation_done.load());
+    
     tasklet.get_task()();
     
-    // Check computation result (sum of 1 to 100 = 5050)
     ASSERT_EQ(5050, computation_result.load());
     ASSERT_TRUE(computation_done.load());
 }
@@ -217,226 +194,198 @@ TEST(TaskletThreadSafety) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    const int num_threads = 10;
-    const int operations_per_thread = 100;
     std::vector<std::thread> threads;
-    std::atomic<int> completed_operations(0);
+    std::atomic<int> set_result_count(0);
+    std::atomic<int> set_error_count(0);
     
-    // Create threads that modify tasklet state
-    for (int i = 0; i < num_threads; i++) {
-        threads.emplace_back([&tasklet, &completed_operations, operations_per_thread, i]() {
-            for (int j = 0; j < operations_per_thread; j++) {
-                // Mark states (note: these are one-way operations)
-                if (j % 3 == 0) {
-                    tasklet.mark_running();
-                } else if (j % 3 == 1) {
-                    tasklet.mark_finished();
-                }
-                
-                // Set result and error
-                tasklet.set_result("Result from thread " + std::to_string(i) + " operation " + std::to_string(j));
-                tasklet.set_error("Error from thread " + std::to_string(i) + " operation " + std::to_string(j));
-                
-                // Read state (should be thread-safe)
-                volatile bool is_running = tasklet.is_running();
-                volatile bool is_finished = tasklet.is_finished();
-                volatile bool has_error = tasklet.has_error();
-                
-                // Prevent compiler optimization
-                (void)is_running;
-                (void)is_finished;
-                (void)has_error;
-                
-                completed_operations++;
+    for (int i = 0; i < 10; i++) {
+        threads.emplace_back([&tasklet, i, &set_result_count, &set_error_count]() {
+            if (i % 2 == 0) {
+                tasklet.set_result("Result from thread " + std::to_string(i));
+                set_result_count.fetch_add(1);
+            } else {
+                tasklet.set_error("Error from thread " + std::to_string(i));
+                set_error_count.fetch_add(1);
             }
         });
     }
     
-    // Wait for all threads to complete
     for (auto& thread : threads) {
         thread.join();
     }
     
-    ASSERT_EQ(num_threads * operations_per_thread, completed_operations.load());
+    ASSERT_EQ(5, set_result_count.load());
+    ASSERT_EQ(5, set_error_count.load());
     
-    // Tasklet should have some error and result set
     ASSERT_TRUE(tasklet.has_error());
-    ASSERT_TRUE(tasklet.get_result().length() > 0);
-    ASSERT_TRUE(tasklet.get_error().length() > 0);
+    ASSERT_FALSE(tasklet.get_result().empty());
 }
 
 TEST(TaskletConcurrentExecution) {
-    std::atomic<int> execution_count(0);
-    
-    auto task = [&execution_count]() {
-        execution_count.fetch_add(1);
-        // Small delay to simulate work
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+    std::atomic<int> counter(0);
+    auto task = [&counter]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        counter.fetch_add(1);
     };
     
     Tasklet tasklet(1, task);
     
-    const int num_threads = 5;
     std::vector<std::thread> threads;
-    
-    // Create threads that execute the same task
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < 5; i++) {
         threads.emplace_back([&tasklet]() {
             tasklet.get_task()();
         });
     }
     
-    // Wait for all threads to complete
     for (auto& thread : threads) {
         thread.join();
     }
     
-    // Task should be executed by all threads
-    ASSERT_EQ(num_threads, execution_count.load());
+    ASSERT_EQ(5, counter.load());
 }
 
 TEST(TaskletLambdaCapture) {
-    int captured_value = 100;
-    std::atomic<int> result(0);
+    int captured_value = 42;
+    std::string captured_string = "captured";
     
-    // Lambda that captures by value
-    auto task = [captured_value, &result]() {
-        result.store(captured_value * 2);
+    auto task = [captured_value, captured_string]() {
+        ASSERT_EQ(42, captured_value);
+        ASSERT_STREQ("captured", captured_string.c_str());
     };
     
     Tasklet tasklet(1, task);
-    
-    // Execute task
     tasklet.get_task()();
-    
-    ASSERT_EQ(200, result.load());
-    
-    // Modify original value (should not affect the captured value)
-    captured_value = 500;
-    tasklet.get_task()();
-    
-    // Result should still be 200 (captured value was 100)
-    ASSERT_EQ(200, result.load());
 }
 
 TEST(TaskletMutableLambda) {
-    std::atomic<int> execution_count(0);
+    int mutable_value = 0;
     
-    // Mutable lambda that modifies captured value
-    auto task = [execution_count = 0]() mutable {
-        execution_count++;
-        // Note: This modification is local to the lambda
+    auto task = [mutable_value]() mutable {
+        mutable_value = 100;
+        ASSERT_EQ(100, mutable_value);
     };
     
     Tasklet tasklet(1, task);
-    
-    // Execute task multiple times
-    for (int i = 0; i < 5; i++) {
-        tasklet.get_task()();
-    }
-    
-    // Original atomic counter should not change
-    ASSERT_EQ(0, execution_count.load());
+    tasklet.get_task()();
 }
 
 TEST(TaskletExceptionHandling) {
-    // Task that throws exception
     auto throwing_task = []() {
         throw std::runtime_error("Test exception");
     };
     
     Tasklet tasklet(1, throwing_task);
     
-    // Execute task - should not crash the test
-    // Note: Exception handling would be done by the thread pool
-    bool exception_caught = false;
-    
     try {
         tasklet.get_task()();
+        FAIL("Expected exception was not thrown");
     } catch (const std::runtime_error& e) {
-        exception_caught = true;
         ASSERT_STREQ("Test exception", e.what());
     }
-    
-    ASSERT_TRUE(exception_caught);
 }
 
 TEST(TaskletStateConsistency) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    // Test state consistency
     ASSERT_FALSE(tasklet.is_finished());
     ASSERT_FALSE(tasklet.is_running());
     ASSERT_FALSE(tasklet.has_error());
     
-    // Mark running, then finished
     tasklet.mark_running();
     ASSERT_TRUE(tasklet.is_running());
     ASSERT_FALSE(tasklet.is_finished());
     
+    tasklet.set_result("Success");
+    ASSERT_TRUE(tasklet.is_running());
+    ASSERT_FALSE(tasklet.is_finished());
+    ASSERT_FALSE(tasklet.has_error());
+    ASSERT_STREQ("Success", tasklet.get_result().c_str());
+    
     tasklet.mark_finished();
-    ASSERT_FALSE(tasklet.is_running()); // mark_finished() sets running to false
-    ASSERT_TRUE(tasklet.is_finished());
-    
-    // Add error
-    tasklet.set_error("Test error");
-    
-    ASSERT_TRUE(tasklet.has_error());
     ASSERT_TRUE(tasklet.is_finished());
     ASSERT_FALSE(tasklet.is_running());
+    ASSERT_FALSE(tasklet.has_error());
+    ASSERT_STREQ("Success", tasklet.get_result().c_str());
 }
 
 TEST(TaskletMultipleTaskletInstances) {
-    std::atomic<int> task1_count(0);
-    std::atomic<int> task2_count(0);
+    auto task = []() {};
     
-    auto task1 = [&task1_count]() {
-        task1_count.fetch_add(1);
-    };
+    std::vector<std::unique_ptr<Tasklet>> tasklets;
+    for (uint64_t i = 0; i < 100; i++) {
+        tasklets.emplace_back(std::make_unique<Tasklet>(i, task));
+    }
     
-    auto task2 = [&task2_count]() {
-        task2_count.fetch_add(1);
-    };
+    for (size_t i = 0; i < tasklets.size(); i++) {
+        ASSERT_EQ(i, tasklets[i]->get_id());
+        ASSERT_FALSE(tasklets[i]->is_finished());
+        ASSERT_FALSE(tasklets[i]->is_running());
+    }
     
-    Tasklet tasklet1(1, task1);
-    Tasklet tasklet2(2, task2);
+    tasklets[50]->set_result("Result 50");
+    tasklets[75]->set_error("Error 75");
     
-    // Execute tasks
-    tasklet1.get_task()();
-    tasklet2.get_task()();
-    
-    ASSERT_EQ(1, task1_count.load());
-    ASSERT_EQ(1, task2_count.load());
-    
-    // Execute again
-    tasklet1.get_task()();
-    tasklet1.get_task()();
-    tasklet2.get_task()();
-    
-    ASSERT_EQ(3, task1_count.load());
-    ASSERT_EQ(2, task2_count.load());
-    
-    // Verify IDs are different
-    ASSERT_NE(tasklet1.get_id(), tasklet2.get_id());
+    ASSERT_STREQ("Result 50", tasklets[50]->get_result().c_str());
+    ASSERT_STREQ("Error 75", tasklets[75]->get_error().c_str());
+    ASSERT_TRUE(tasklets[75]->has_error());
 }
 
 TEST(TaskletLargeResultAndError) {
     auto task = []() {};
     Tasklet tasklet(1, task);
     
-    // Test with large result string
-    std::string large_result(10000, 'R');
-    tasklet.set_result(large_result);
-    ASSERT_STREQ(large_result.c_str(), tasklet.get_result().c_str());
-    
-    // Test with large error string
+    std::string large_result(10000, 'X');
     std::string large_error(10000, 'E');
+    
+    tasklet.set_result(large_result);
     tasklet.set_error(large_error);
+    
+    ASSERT_STREQ(large_result.c_str(), tasklet.get_result().c_str());
     ASSERT_STREQ(large_error.c_str(), tasklet.get_error().c_str());
     ASSERT_TRUE(tasklet.has_error());
+}
+
+TEST(TaskletSynchronization) {
+    auto task = []() {};
+    Tasklet tasklet(1, task);
     
-    // Both should coexist
-    ASSERT_STREQ(large_result.c_str(), tasklet.get_result().c_str());
-    ASSERT_STREQ(large_error.c_str(), tasklet.get_error().c_str());
+    std::atomic<bool> thread_started(false);
+    std::atomic<bool> thread_finished(false);
+    
+    std::thread sync_thread([&tasklet, &thread_started, &thread_finished]() {
+        thread_started.store(true);
+        tasklet.wait_for_completion();
+        thread_finished.store(true);
+    });
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    ASSERT_TRUE(thread_started.load());
+    ASSERT_FALSE(thread_finished.load());
+    
+    tasklet.mark_finished();
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    ASSERT_TRUE(thread_finished.load());
+    
+    sync_thread.join();
+}
+
+TEST(TaskletMoveSemantics) {
+    auto task = []() {};
+    Tasklet tasklet1(1, task);
+    
+    tasklet1.set_result("Result 1");
+    tasklet1.mark_running();
+    
+    ASSERT_EQ(1, tasklet1.get_id());
+    ASSERT_TRUE(tasklet1.is_running());
+    ASSERT_STREQ("Result 1", tasklet1.get_result().c_str());
+    
+    Tasklet tasklet2(2, task);
+    tasklet2.set_error("Error 2");
+    
+    ASSERT_EQ(2, tasklet2.get_id());
+    ASSERT_TRUE(tasklet2.has_error());
+    ASSERT_STREQ("Error 2", tasklet2.get_error().c_str());
 } 

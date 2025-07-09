@@ -7,7 +7,7 @@ A **breakthrough implementation** of lightweight cooperative tasklets for Node.j
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/tasklets)](https://nodejs.org/)
 
-## **Version 1.0.0 - Modern API Revolution**
+## Version 1.0.0 - Modern API Revolution
 
 **Complete API redesign** with focus on **developer experience** and **simplicity**:
 
@@ -27,6 +27,8 @@ A **breakthrough implementation** of lightweight cooperative tasklets for Node.j
 - **Exceptional Performance**: Native C++ implementation with libuv thread pool
 - **True Parallelism**: Real parallel execution across multiple worker threads
 - **Smart System Adaptation**: Automatically detects and adapts to your hardware capabilities
+- **Automated Adaptive Configuration**: Intelligent runtime optimization based on performance metrics
+- **Intelligent Auto-Scheduler**: Automatic MicroJob and NativeThreadPool optimization
 - **Promise-Native**: Built for modern JavaScript patterns
 - **TypeScript First**: Complete type definitions included
 - **Production Ready**: Comprehensive error handling and monitoring
@@ -96,8 +98,8 @@ const batchResults = await tasklets.batch([
     { name: 'task2', task: () => heavyWork2() },
     { name: 'task3', task: () => heavyWork3() }
 ], {
-    onProgress: (progress) => {
-        console.log(`Progress: ${progress.completed}/${progress.total}`);
+    progress: (completed, total, name) => {
+        console.log(`Progress: ${completed}/${total} - ${name}`);
     }
 });
 
@@ -116,16 +118,16 @@ await tasklets.shutdown({ timeout: 5000 });
 
 ## **Modern API Overview**
 
-### **Core Tasklets Functions**
+### Core Tasklets Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
 | `run(fn, options?)` | Execute a single task | `await tasklets.run(() => work())` |
 | `runAll(tasks, options?)` | Execute tasks in parallel | `await tasklets.runAll([task1, task2])` |
-| `batch(configs, options?)` | Batch processing with progress | `await tasklets.batch(tasks, { onProgress })` |
+| `batch(configs, options?)` | Batch processing with progress | `await tasklets.batch(tasks, { progress })` |
 | `retry(fn, options?)` | Retry with exponential backoff | `await tasklets.retry(() => api(), { attempts: 3 })` |
 
-### **Configuration & Monitoring**
+### Configuration & Monitoring
 
 | Function | Description | Example |
 |----------|-------------|---------|
@@ -232,15 +234,16 @@ const batchResults = await tasklets.batch([
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### **Core Features**
+### Core Features
 
 Our **high-performance tasklets system** focuses on maximum efficiency and ease of use:
 
-- **🚀 Zero-overhead execution** - Direct C++ binding with minimal JavaScript layer
-- **⚡ Promise-native API** - Modern async/await support with intelligent error handling
-- **🎯 Smart defaults** - Works out of the box with automatic thread pool sizing
-- **📊 Built-in monitoring** - Real-time statistics and health monitoring
-- **🔧 Configurable behavior** - Fine-tune performance for your specific needs
+- **Zero-overhead execution** - Direct C++ binding with minimal JavaScript layer
+- **Promise-native API** - Modern async/await support with intelligent error handling
+- **Smart defaults** - Works out of the box with automatic thread pool sizing
+- **Built-in monitoring** - Real-time statistics and health monitoring
+- **Configurable behavior** - Fine-tune performance for your specific needs
+- **Automated adaptation** - Intelligent runtime optimization based on performance metrics
 
 ## **Performance & Use Cases**
 
@@ -346,15 +349,96 @@ async function fetchWithRetry(url) {
 }
 ```
 
+### Automated Adaptive Configuration
+
+```javascript
+const tasklets = require('tasklets');
+
+// Enable intelligent adaptive optimization
+tasklets.enableAdaptiveMode();
+
+// Set workload type for better optimization
+tasklets.setWorkloadType('cpu-intensive');
+
+// Run tasks - system automatically optimizes settings
+const results = await tasklets.runAll([
+    () => heavyComputation(),
+    () => dataProcessing(),
+    () => fileOperations()
+]);
+
+// Check adaptive metrics
+const metrics = tasklets.getAdaptiveMetrics();
+const lastAdjustment = tasklets.getLastAdjustment();
+
+console.log('Performance metrics:', metrics);
+console.log('Last optimization:', lastAdjustment);
+```
+
+The adaptive system automatically:
+- **Scales worker threads** based on CPU utilization
+- **Adjusts memory limits** based on memory pressure
+- **Optimizes batch sizes** for maximum throughput
+- **Monitors performance** and makes intelligent adjustments
+- **Adapts to workload changes** in real-time
+
+### Intelligent Auto-Scheduler
+
+```javascript
+const tasklets = require('tasklets');
+
+// Enable intelligent auto-scheduling
+tasklets.enableAutoScheduling();
+
+// Run different workload types - auto-scheduler detects patterns
+await tasklets.runAll([
+    // CPU-intensive tasks
+    () => heavyComputation(),
+    () => mathematicalProcessing(),
+    
+    // I/O-intensive tasks
+    () => fileOperations(),
+    () => networkRequests(),
+    
+    // Memory-intensive tasks
+    () => largeDataProcessing(),
+    () => imageProcessing()
+]);
+
+// Get auto-scheduling recommendations
+const recommendations = tasklets.getAutoSchedulingRecommendations();
+console.log('Worker scaling:', recommendations.should_scale_up ? 'Scale UP' : 'Maintain');
+console.log('Recommended workers:', recommendations.recommended_worker_count);
+console.log('Confidence:', (recommendations.worker_scaling_confidence * 100).toFixed(1) + '%');
+
+// Apply recommendations automatically
+tasklets.applyAutoSchedulingRecommendations();
+
+// Monitor performance patterns
+const metricsHistory = tasklets.getAutoSchedulingMetricsHistory();
+const patterns = metricsHistory.map(m => m.detected_pattern);
+console.log('Detected patterns:', patterns);
+```
+
+The auto-scheduler intelligently:
+- **Detects workload patterns** (CPU-intensive, I/O-intensive, Memory-intensive, Burst, Steady, Mixed)
+- **Estimates job complexity** (Trivial, Simple, Moderate, Complex, Heavy)
+- **Scales worker threads** based on utilization and patterns
+- **Adjusts timeouts** based on job complexity and failure rates
+- **Recommends priorities** based on workload characteristics
+- **Suggests batching strategies** for optimal throughput
+- **Optimizes load balancing** across workers
+- **Provides confidence scores** for all recommendations
+
 ## Recent Improvements
 
 ### Version 1.0.0 Highlights
 
-1. **🎯 Simplified API** - Modern Promise-based interface with 80% less boilerplate
-2. **⚡ Performance boost** - Optimized native bindings with reduced overhead
-3. **📊 Enhanced monitoring** - Built-in health checks and comprehensive statistics
-4. **🔧 Smart configuration** - Auto-detecting optimal settings for your hardware
-5. **📝 TypeScript-first** - Complete type definitions with intelligent inference
+1. **Simplified API** - Modern Promise-based interface with 80% less boilerplate
+2. **Performance boost** - Optimized native bindings with reduced overhead
+3. **Enhanced monitoring** - Built-in health checks and comprehensive statistics
+4. **Smart configuration** - Auto-detecting optimal settings for your hardware
+5. **TypeScript-first** - Complete type definitions with intelligent inference
 
 ### **Breaking Changes from 0.x**
 
@@ -375,11 +459,11 @@ const result = await tasklets.run(() => heavyWork());
 ```
 
 **Migration benefits:**
-- ✅ **90% less code** for common operations
-- ✅ **Zero manual memory management** 
-- ✅ **Built-in error handling** and timeouts
-- ✅ **Promise-native** with async/await support
-- ✅ **TypeScript-ready** with full type inference
+- **90% less code** for common operations
+- **Zero manual memory management** 
+- **Built-in error handling** and timeouts
+- **Promise-native** with async/await support
+- **TypeScript-ready** with full type inference
 
 ## Documentation
 
@@ -387,6 +471,7 @@ const result = await tasklets.run(() => heavyWork());
 - [Getting Started](docs/getting-started.md) - Step-by-step tutorial
 - [Examples](docs/examples.md) - Real-world usage examples
 - [Performance Guide](docs/performance-guide.md) - Optimization tips
+- [Adaptive Configuration](docs/adaptive-configuration.md) - Automated optimization system
 - [Best Practices](docs/best-practices.md) - Recommended patterns
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
@@ -400,7 +485,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## Support
 
-- 📧 Email: jacksonwendel@gmail.com
-- 💬 Discord: [Join our community](https://discord.gg/tasklets)
-- 🐛 Issues: [GitHub Issues](https://github.com/wendelmax/tasklets/issues)
-- 📖 Documentation: [Full Documentation](https://docs.tasklets.dev) 
+- Email: jacksonwendel@gmail.com
+- Discord: [Join our community](https://discord.gg/tasklets)
+- Issues: [GitHub Issues](https://github.com/wendelmax/tasklets/issues)
+- Documentation: [Full Documentation](https://docs.tasklets.dev) 

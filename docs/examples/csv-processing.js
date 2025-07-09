@@ -1,3 +1,14 @@
+/**
+ * @file csv-processing.js
+ * @description This example demonstrates how to process a large CSV file in parallel using Tasklets.
+ * The script performs the following steps:
+ * 1. Generates a sample CSV file with a specified number of rows.
+ * 2. Reads the large CSV file and splits it into smaller chunks.
+ * 3. Processes each chunk of data in parallel using `tasklets.runAll()`. Each tasklet calculates
+ *  statistics for its assigned chunk.
+ * 4. Aggregates the results from all chunks to get the final statistics for the entire file.
+ * This is a practical example of how to handle I/O-bound and data-processing tasks concurrently.
+ */
 const tasklets = require('../../lib/tasklets');
 const fs = require('fs');
 
@@ -84,7 +95,7 @@ async function processLargeCsv(filename) {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  chunks.map((chunk, index) => 
+  chunks.map((chunk, index) =>
   () => processCsvChunk(chunk, index)
   )
   );

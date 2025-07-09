@@ -1,3 +1,13 @@
+/**
+ * @file url-fetching.js
+ * @description This example demonstrates parallel URL fetching and analysis using Tasklets.
+ * It includes the following functionalities:
+ * - A function to fetch a single URL with timeout handling.
+ * - A function to fetch multiple URLs in parallel using `tasklets.runAll()`.
+ * - A benchmarking function to test the performance of fetching URLs over multiple iterations.
+ * - Parallel analysis of the fetched responses, including response times, status codes, and data sizes.
+ * This example is a good demonstration of how to handle I/O-bound tasks concurrently.
+ */
 const tasklets = require('../../lib/tasklets');
 const https = require('https');
 const http = require('http');

@@ -1,19 +1,29 @@
-const tasklets = require('tasklets');
+/**
+ * @file matrix-multiplication.js
+ * @description This example demonstrates how to perform matrix multiplication and other matrix operations in parallel using Tasklets.
+ * It showcases different strategies for parallelization:
+ * - Row-parallel multiplication: Each row of the resulting matrix is computed in a separate task.
+ * - Block-parallel multiplication: The matrix is divided into blocks, and each block is processed in a separate task.
+ * The example also includes a performance comparison between sequential and parallel matrix multiplication,
+ * as well as demonstrations of other operations like addition, subtraction, and transposition.
+ * This is a good example of how to handle CPU-bound, highly parallelizable tasks.
+ */
+const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Matrix Multiplication Example\n');
 
 function createMatrix(rows, cols, fillValue = null) {
   if (fillValue === null) {
-  return Array.from({ length: rows }, () => 
-  Array.from({ length: cols }, () => Math.random() * 10)
+  return Array.from({length: rows}, () =>
+  Array.from({length: cols}, () => Math.random() * 10)
   );
   } else if (typeof fillValue === 'function') {
-  return Array.from({ length: rows }, (_, i) => 
-  Array.from({ length: cols }, (_, j) => fillValue(i, j))
+  return Array.from({length: rows}, (_, i) =>
+  Array.from({length: cols}, (_, j) => fillValue(i, j))
   );
   } else {
-  return Array.from({ length: rows }, () => 
-  Array.from({ length: cols }, () => fillValue)
+  return Array.from({length: rows}, () =>
+  Array.from({length: cols}, () => fillValue)
   );
   }
 }
@@ -34,7 +44,7 @@ function multiplyMatrixRow(matrixA, matrixB, rowIndex) {
   result.push(sum);
   }
 
-  return { rowIndex, row: result };
+  return {rowIndex, row: result};
 }
 
 function multiplyMatrixBlock(matrixA, matrixB, startRow, endRow) {
@@ -50,7 +60,7 @@ function multiplyMatrixBlock(matrixA, matrixB, startRow, endRow) {
   }
   row.push(sum);
   }
-  result.push({ rowIndex: i, row });
+  result.push({rowIndex: i, row});
   }
 
   return result;
@@ -67,14 +77,14 @@ async function parallelMatrixMultiplication() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  Array.from({ length: matrixA.length }, (_, i) => 
+  Array.from({length: matrixA.length}, (_, i) =>
   () => multiplyMatrixRow(matrixA, matrixB, i)
   )
   );
 
   // Reconstruct result matrix
   const result = new Array(size);
-  results.forEach(({ rowIndex, row }) => {
+  results.forEach(({rowIndex, row}) => {
   result[rowIndex] = row;
   });
 
@@ -86,7 +96,7 @@ async function parallelMatrixMultiplication() {
   // Verify a small portion of the result
   console.log(`Sample result values: [${result[0].slice(0, 3).map(v => v.toFixed(2)).join(', ')}...]`);
 
-  return { result, time: endTime - startTime };
+  return {result, time: endTime - startTime};
 }
 
 async function blockParallelMultiplication() {
@@ -103,11 +113,11 @@ async function blockParallelMultiplication() {
   const blocks = [];
   for (let i = 0; i < size; i += blockSize) {
   const endRow = Math.min(i + blockSize, size);
-  blocks.push({ startRow: i, endRow });
+  blocks.push({startRow: i, endRow});
   }
 
   const results = await tasklets.runAll(
-  blocks.map(chunk => 
+  blocks.map(chunk =>
   () => multiplyMatrixBlock(matrixA, matrixB, chunk.startRow, chunk.endRow)
   )
   );
@@ -115,7 +125,7 @@ async function blockParallelMultiplication() {
   // Reconstruct result matrix
   const result = new Array(size);
   results.forEach(blockResult => {
-  blockResult.forEach(({ rowIndex, row }) => {
+  blockResult.forEach(({rowIndex, row}) => {
   result[rowIndex] = row;
   });
   });
@@ -125,7 +135,7 @@ async function blockParallelMultiplication() {
   console.log(`Block-parallel multiplication completed in ${endTime - startTime}ms`);
   console.log(`Processed ${blocks.length} blocks of ${blockSize} rows each`);
 
-  return { result, time: endTime - startTime, blocks: blocks.length };
+  return {result, time: endTime - startTime, blocks: blocks.length};
 }
 
 async function performanceComparison() {
@@ -163,7 +173,7 @@ async function performanceComparison() {
   // Parallel multiplication
   const parStart = Date.now();
   const rowResults = await tasklets.runAll(
-  Array.from({ length: size }, (_, i) => 
+  Array.from({length: size}, (_, i) =>
   () => multiplyMatrixRow(matrixA, matrixB, i)
   )
   );
@@ -311,12 +321,12 @@ async function chainedMatrixOperations() {
   const [productAB, productCD] = await Promise.all([
   // A * B
   tasklets.runAll(
-  Array.from({ length: size }, (_, i) => 
+  Array.from({length: size}, (_, i) =>
   () => multiplyMatrixRow(matrixA, matrixB, i)
   )
   ).then(rowResults => {
   const result = new Array(size);
-  rowResults.forEach(({ rowIndex, row }) => {
+  rowResults.forEach(({rowIndex, row}) => {
   result[rowIndex] = row;
   });
   return result;
@@ -324,12 +334,12 @@ async function chainedMatrixOperations() {
 
   // C * D
   tasklets.runAll(
-  Array.from({ length: size }, (_, i) => 
+  Array.from({length: size}, (_, i) =>
   () => multiplyMatrixRow(matrixC, matrixD, i)
   )
   ).then(rowResults => {
   const result = new Array(size);
-  rowResults.forEach(({ rowIndex, row }) => {
+  rowResults.forEach(({rowIndex, row}) => {
   result[rowIndex] = row;
   });
   return result;
@@ -338,20 +348,20 @@ async function chainedMatrixOperations() {
 
   // Add the results in parallel (by rows)
   const finalResult = await tasklets.runAll(
-  Array.from({ length: size }, (_, i) => 
+  Array.from({length: size}, (_, i) =>
   () => {
   const row = new Array(size);
   for (let j = 0; j < size; j++) {
   row[j] = productAB[i][j] + productCD[i][j];
   }
-  return { rowIndex: i, row };
+  return {rowIndex: i, row};
   }
   )
   );
 
   // Reconstruct final matrix
   const result = new Array(size);
-  finalResult.forEach(({ rowIndex, row }) => {
+  finalResult.forEach(({rowIndex, row}) => {
   result[rowIndex] = row;
   });
 
@@ -360,7 +370,7 @@ async function chainedMatrixOperations() {
   console.log(`Chained operations completed in ${endTime - startTime}ms`);
   console.log(`Final result sample: ${result[0][0].toFixed(4)}`);
 
-  return { result, time: endTime - startTime };
+  return {result, time: endTime - startTime};
 }
 
 // Run all examples

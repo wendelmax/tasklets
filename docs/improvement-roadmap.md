@@ -1,8 +1,8 @@
 # Improvement Roadmap for Tasklets
 
-This document outlines critical improvements needed based on test results and benchmarks.
+This document outlines critical improvements needed based on test results, benchmarks, and architectural analysis.
 
-## 🚨 Critical Issues (High Priority)
+## Critical Issues (High Priority)
 
 ### 1. Native Module Result Handling
 **Problem:** JavaScript tasks don't return actual computed values, only "Task completed successfully"
@@ -67,18 +67,7 @@ FATAL ERROR: Error::New napi_get_last_error_info
 - Add fast-path for simple computations
 - Consider task pooling to reduce allocation overhead
 
-### 2. Memory Management
-**Issues Identified:**
-- No explicit memory cleanup in benchmarks
-- Potential memory leaks in long-running applications
-- ThreadSafeFunction resources not properly released
-
-**Solutions:**
-- Add automatic cleanup for completed tasks
-- Implement memory pool for frequently used objects
-- Add memory usage monitoring and alerts
-
-### 3. Worker Thread Efficiency
+### 2. Worker Thread Efficiency
 **Current Issues:**
 - Fixed worker pool size
 - No dynamic scaling based on workload
@@ -163,6 +152,109 @@ const taskId = await tasklets.run(longTask, {
 await tasklets.cancel(taskId);
 ```
 
+##  Advanced Concurrency Patterns (Medium Priority)
+
+### 1. Reactive Programming Integration
+**Motivation:** Based on CPU-bound vs I/O-bound analysis, implement reactive streams for complex async flows
+
+**Implementation:**
+```javascript
+// Reactive stream interface
+const stream = tasklets.createStream({
+  backpressure: 'drop', // or 'buffer', 'block'
+  bufferSize: 1000
+});
+
+stream.on('data', (result) => console.log('Task completed:', result));
+stream.on('error', (error) => console.error('Stream error:', error));
+stream.on('end', () => console.log('All tasks completed'));
+
+// Submit tasks to stream
+for (const task of tasks) {
+  stream.write(task);
+}
+stream.end();
+```
+
+### 2. Advanced I/O Patterns
+**Motivation:** Implement specialized I/O handling as recommended in the article
+
+**Features:**
+- **Asynchronous I/O** with libuv's async file operations
+- **Non-blocking I/O** patterns for file and network operations
+- **I/O-specific thread pools** for database operations
+- **Event-driven task scheduling**
+
+```javascript
+// I/O-specific configuration
+tasklets.config({
+  io: {
+  pools: {
+  file: { workers: 4, priority: 'low' },
+  network: { workers: 8, priority: 'high' },
+  database: { workers: 2, priority: 'medium' }
+  },
+  async: true,
+  nonBlocking: true
+  }
+});
+```
+
+### 3. Automatic Workload Detection
+**Motivation:** Add runtime workload analysis for automatic configuration
+
+**Implementation:**
+```javascript
+// Enhanced workload detection
+function detectWorkloadType(task) {
+  // Analyze task characteristics
+  // Return 'cpu-bound', 'io-bound', or 'mixed'
+}
+
+// Automatic configuration based on workload
+tasklets.autoConfigure({
+  detection: true,
+  adaptation: true,
+  monitoring: true
+});
+```
+
+### 4. Backpressure Handling
+**Motivation:** Implement backpressure mechanisms for high-load scenarios
+
+**Implementation:**
+```javascript
+// Backpressure configuration
+tasklets.config({
+  backpressure: {
+  strategy: 'drop', // 'drop', 'buffer', 'block'
+  bufferSize: 1000,
+  timeout: 5000,
+  onOverflow: (task) => console.warn('Task dropped due to backpressure')
+  }
+});
+```
+
+### 5. Advanced Scheduling
+**Motivation:** Add priority-based scheduling and deadline management
+
+**Implementation:**
+```javascript
+// Priority-based task execution
+const highPriorityTask = tasklets.run(criticalTask, {
+  priority: 'high',
+  deadline: Date.now() + 5000, // 5 second deadline
+  preempt: true // Can preempt lower priority tasks
+});
+
+// Deadline management
+tasklets.run(longTask, {
+  deadline: Date.now() + 30000,
+  onDeadline: () => console.warn('Task approaching deadline'),
+  onTimeout: () => console.error('Task exceeded deadline')
+});
+```
+
 ##  Monitoring and Observability (Low Priority)
 
 ### 1. Enhanced Metrics
@@ -230,15 +322,21 @@ const health = tasklets.getHealth();
 
 ### Phase 2 (Performance - 4-6 weeks)
 1. Optimize task overhead
-2. Implement memory management
-3. Add worker scaling
+2. Add worker scaling
+3. Implement automatic workload detection
 
-### Phase 3 (Features - 6-8 weeks)
+### Phase 3 (Advanced Patterns - 6-8 weeks)
+1. Reactive programming integration
+2. Advanced I/O patterns
+3. Backpressure handling
+4. Advanced scheduling
+
+### Phase 4 (Features - 4-6 weeks)
 1. Enhanced configuration
 2. Task management features
 3. Better error reporting
 
-### Phase 4 (Infrastructure - 4-6 weeks)
+### Phase 5 (Infrastructure - 4-6 weeks)
 1. Monitoring and metrics
 2. Build system improvements
 3. Documentation completion
@@ -253,15 +351,21 @@ const health = tasklets.getHealth();
 
 ### Phase 2 Success Criteria:
 - [ ] <1ms overhead for simple tasks
-- [ ] Memory usage stable over time
 - [ ] Adaptive worker scaling functional
+- [ ] Automatic workload detection working
 
 ### Phase 3 Success Criteria:
+- [ ] Reactive streams functional
+- [ ] Advanced I/O patterns implemented
+- [ ] Backpressure handling working
+- [ ] Priority scheduling operational
+
+### Phase 4 Success Criteria:
 - [ ] Comprehensive configuration API
 - [ ] Task cancellation working
 - [ ] Detailed error context available
 
-### Phase 4 Success Criteria:
+### Phase 5 Success Criteria:
 - [ ] Full monitoring dashboard
 - [ ] Automated multi-platform builds
 - [ ] Complete documentation coverage
@@ -269,3 +373,67 @@ const health = tasklets.getHealth();
 ---
 
 *This roadmap should be reviewed and updated as implementation progresses and new issues are discovered.* 
+
+## Proposed Modern API (Future)
+
+This section outlines a proposed "modern" API that aims to simplify common patterns. This is not yet implemented.
+
+### `tasklets.runAll(tasks, options?)`
+Execute multiple tasks in parallel and return a single Promise that resolves when all tasks are complete.
+
+- **`tasks: Function[]`**: An array of functions to execute.
+- **`options: Object`**: Options to apply to all tasks.
+- **Returns**: `Promise<T[]>`
+
+**Example:**
+```javascript
+const results = await tasklets.runAll([
+  () => fibonacci(35),
+  () => fibonacci(36),
+]);
+```
+
+### `tasklets.batch(taskConfigs, options?)`
+A more advanced method for executing tasks in batches with progress tracking.
+
+- **`taskConfigs: { name: string, task: Function }[]`**: Array of named task configurations.
+- **`options: { onProgress: Function }`**: Options including a progress callback.
+- **Returns**: `Promise<{name: string, success: boolean, result?: any, error?: any}[]>`
+
+**Example:**
+```javascript
+const results = await tasklets.batch(largeTaskList, {
+  onProgress: (progress) => {
+  console.log(`Progress: ${progress.percentage}%`);
+  }
+});
+```
+
+### `tasklets.retry(fn, options?)`
+Automatically retry a task if it fails, with configurable exponential backoff.
+
+- **`fn: Function`**: The function to retry.
+- **`options: { attempts: number, delay: number, backoff: number }`**: Retry strategy options.
+- **Returns**: `Promise<T>`
+
+**Example:**
+```javascript
+const data = await tasklets.retry(() => fetchFromFlakyApi(), {
+  attempts: 5,
+  delay: 200, // ms
+  backoff: 2
+});
+```
+
+### `tasklets.shutdown(options?)`
+Gracefully shut down the thread pool, waiting for active tasks to complete.
+
+- **`options: { timeout: number }`**: Timeout to wait for tasks to finish.
+- **Returns**: `Promise<void>`
+
+### Advanced `tasklets.config(options)`
+The configuration will be expanded to include more options for controlling the thread pool.
+
+- **`workers: number | 'auto'`**: Number of worker threads.
+- **`timeout: number`**: Default timeout for tasks.
+- **`maxMemory: string`**: A future feature to limit memory usage. 

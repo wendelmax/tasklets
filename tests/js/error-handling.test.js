@@ -55,7 +55,7 @@ describe('Error Handling Tests', () => {
 
   test('should handle tasks that throw object errors', async () => {
   const result = await tasklets.run(() => {
-  throw { message: 'Object error', code: 500 };
+  throw {message: 'Object error', code: 500};
   });
 
   expect(typeof result).toBe('string');
@@ -112,11 +112,21 @@ describe('Error Handling Tests', () => {
 
   test('should handle multiple error types in runAll', async () => {
   const tasks = [
-  () => { throw new Error('Error 1'); },
-  () => { throw new TypeError('Type error'); },
-  () => { throw 'String error'; },
-  () => { throw { message: 'Object error' }; },
-  () => { throw null; }
+  () => {
+  throw new Error('Error 1');
+  },
+  () => {
+  throw new TypeError('Type error');
+  },
+  () => {
+  throw 'String error';
+  },
+  () => {
+  throw {message: 'Object error'};
+  },
+  () => {
+  throw null;
+  }
   ];
 
   const results = await tasklets.runAll(tasks);
@@ -130,9 +140,21 @@ describe('Error Handling Tests', () => {
 
   test('should handle errors in batch operations', async () => {
   const taskConfigs = [
-  { name: 'error1', task: () => { throw new Error('Batch error 1'); } },
-  { name: 'error2', task: () => { throw new TypeError('Batch error 2'); } },
-  { name: 'error3', task: () => { throw 'String error'; } }
+  {
+  name: 'error1', task: () => {
+  throw new Error('Batch error 1');
+  }
+  },
+  {
+  name: 'error2', task: () => {
+  throw new TypeError('Batch error 2');
+  }
+  },
+  {
+  name: 'error3', task: () => {
+  throw 'String error';
+  }
+  }
   ];
 
   const results = await tasklets.batch(taskConfigs);
@@ -187,7 +209,7 @@ describe('Error Handling Tests', () => {
   // Note: Current native module doesn't properly handle timeouts
   const result = await tasklets.run(() => {
   return 'quick task';
-  }, { timeout: 100 });
+  }, {timeout: 100});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -196,7 +218,7 @@ describe('Error Handling Tests', () => {
   test('should handle tasks with zero timeout', async () => {
   const result = await tasklets.run(() => {
   return 'instant task';
-  }, { timeout: 0 });
+  }, {timeout: 0});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -205,7 +227,7 @@ describe('Error Handling Tests', () => {
   test('should handle tasks with negative timeout', async () => {
   const result = await tasklets.run(() => {
   return 'negative timeout task';
-  }, { timeout: -1000 });
+  }, {timeout: -1000});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -214,14 +236,14 @@ describe('Error Handling Tests', () => {
   test('should handle tasks with very large timeout', async () => {
   const result = await tasklets.run(() => {
   return 'large timeout task';
-  }, { timeout: 999999999 });
+  }, {timeout: 999999999});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
   });
 
   test('should handle global timeout configuration', async () => {
-  tasklets.config({ timeout: 1000 });
+  tasklets.config({timeout: 1000});
 
   const result = await tasklets.run(() => {
   return 'global timeout task';
@@ -232,11 +254,11 @@ describe('Error Handling Tests', () => {
   });
 
   test('should handle timeout override in task options', async () => {
-  tasklets.config({ timeout: 100 });
+  tasklets.config({timeout: 100});
 
   const result = await tasklets.run(() => {
   return 'override timeout task';
-  }, { timeout: 5000 });
+  }, {timeout: 5000});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -249,7 +271,7 @@ describe('Error Handling Tests', () => {
   () => 'task3'
   ];
 
-  const results = await tasklets.runAll(tasks, { timeout: 100 });
+  const results = await tasklets.runAll(tasks, {timeout: 100});
 
   expect(results.length).toBe(3);
   results.forEach(result => {
@@ -260,9 +282,9 @@ describe('Error Handling Tests', () => {
 
   test('should handle timeout in batch operations', async () => {
   const taskConfigs = [
-  { name: 'timeout1', task: () => 'task1', options: { timeout: 100 } },
-  { name: 'timeout2', task: () => 'task2', options: { timeout: 200 } },
-  { name: 'timeout3', task: () => 'task3', options: { timeout: 50 } }
+  {name: 'timeout1', task: () => 'task1', options: {timeout: 100}},
+  {name: 'timeout2', task: () => 'task2', options: {timeout: 200}},
+  {name: 'timeout3', task: () => 'task3', options: {timeout: 50}}
   ];
 
   const results = await tasklets.batch(taskConfigs);
@@ -319,10 +341,10 @@ describe('Error Handling Tests', () => {
 
   test('should reject invalid task functions in batch configurations', async () => {
   const invalidConfigs = [
-  { name: 'invalid1', task: "not a function" },
-  { name: 'invalid2', task: 123 },
-  { name: 'invalid3', task: null },
-  { name: 'invalid4', task: undefined }
+  {name: 'invalid1', task: "not a function"},
+  {name: 'invalid2', task: 123},
+  {name: 'invalid3', task: null},
+  {name: 'invalid4', task: undefined}
   ];
 
   for (const config of invalidConfigs) {
@@ -357,7 +379,7 @@ describe('Error Handling Tests', () => {
   describe('resource exhaustion handling', () => {
   test('should handle high concurrency load', async () => {
   const taskCount = 100;
-  const tasks = Array.from({ length: taskCount }, (_, i) => () => `task-${i}`);
+  const tasks = Array.from({length: taskCount}, (_, i) => () => `task-${i}`);
 
   const results = await tasklets.runAll(tasks);
 
@@ -439,7 +461,7 @@ describe('Error Handling Tests', () => {
   });
 
   test('should handle resource exhaustion during batch operations', async () => {
-  const batchConfigs = Array.from({ length: 20 }, (_, i) => ({
+  const batchConfigs = Array.from({length: 20}, (_, i) => ({
   name: `resource-task-${i}`,
   task: () => {
   // Simulate resource usage
@@ -547,7 +569,7 @@ describe('Error Handling Tests', () => {
   const result = await tasklets.run(() => {
   const createDeepObject = (depth) => {
   if (depth <= 0) return 'leaf';
-  return { next: createDeepObject(depth - 1) };
+  return {next: createDeepObject(depth - 1)};
   };
 
   return createDeepObject(100);
@@ -618,11 +640,19 @@ describe('Error Handling Tests', () => {
 
   test('should handle error recovery in batch operations', async () => {
   const taskConfigs = [
-  { name: 'success1', task: () => 'success1' },
-  { name: 'error1', task: () => { throw new Error('error1'); } },
-  { name: 'success2', task: () => 'success2' },
-  { name: 'error2', task: () => { throw new Error('error2'); } },
-  { name: 'success3', task: () => 'success3' }
+  {name: 'success1', task: () => 'success1'},
+  {
+  name: 'error1', task: () => {
+  throw new Error('error1');
+  }
+  },
+  {name: 'success2', task: () => 'success2'},
+  {
+  name: 'error2', task: () => {
+  throw new Error('error2');
+  }
+  },
+  {name: 'success3', task: () => 'success3'}
   ];
 
   const results = await tasklets.batch(taskConfigs);
@@ -651,7 +681,7 @@ describe('Error Handling Tests', () => {
 
   test('should maintain system stability after errors', async () => {
   // Generate many errors
-  const errorTasks = Array.from({ length: 10 }, (_, i) => () => {
+  const errorTasks = Array.from({length: 10}, (_, i) => () => {
   throw new Error(`Error ${i}`);
   });
 

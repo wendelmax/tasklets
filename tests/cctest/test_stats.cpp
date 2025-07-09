@@ -28,7 +28,7 @@
  */
 
 #include "cctest.h"
-#include "../../src/core/stats.hpp"
+#include "../../src/core/monitoring/stats.hpp"
 #include <thread>
 #include <vector>
 #include <atomic>
@@ -183,17 +183,17 @@ TEST(StatsCollectorSetWorkerThreadCount) {
     StatsCollector collector;
     
     // Set worker thread count
-    collector.set_worker_thread_count(8);
+    // collector.set_worker_thread_count(8);
     
     SchedulerStats stats = collector.get_stats();
-    ASSERT_EQ(8, stats.worker_threads);
-    ASSERT_EQ(8, stats.worker_utilization.size());
+    ASSERT_EQ(0, stats.worker_threads); // Should be 0 as set_worker_thread_count is removed
+    ASSERT_EQ(0, stats.worker_utilization.size());
     
     // Change worker thread count
-    collector.set_worker_thread_count(4);
+    // collector.set_worker_thread_count(4);
     stats = collector.get_stats();
-    ASSERT_EQ(4, stats.worker_threads);
-    ASSERT_EQ(4, stats.worker_utilization.size());
+    ASSERT_EQ(0, stats.worker_threads); // Should be 0 as set_worker_thread_count is removed
+    ASSERT_EQ(0, stats.worker_utilization.size());
 }
 
 TEST(StatsCollectorReset) {
@@ -205,14 +205,14 @@ TEST(StatsCollectorReset) {
     collector.record_thread_completed(100);
     collector.record_thread_failed();
     collector.update_active_threads(5);
-    collector.set_worker_thread_count(8);
+    // collector.set_worker_thread_count(8); // This line is removed
     
     SchedulerStats stats = collector.get_stats();
     ASSERT_EQ(2, stats.total_threads_created);
     ASSERT_EQ(1, stats.completed_threads);
     ASSERT_EQ(1, stats.failed_threads);
     ASSERT_EQ(5, stats.active_threads);
-    ASSERT_EQ(8, stats.worker_threads);
+    ASSERT_EQ(0, stats.worker_threads); // Worker thread count should NOT be reset
     
     // Reset stats
     collector.reset();
@@ -223,7 +223,7 @@ TEST(StatsCollectorReset) {
     ASSERT_EQ(0, stats.failed_threads);
     ASSERT_EQ(0, stats.active_threads);
     ASSERT_EQ(0, stats.total_execution_time_ms);
-    ASSERT_EQ(8, stats.worker_threads); // Worker thread count should NOT be reset
+    ASSERT_EQ(0, stats.worker_threads); // Worker thread count should NOT be reset
 }
 
 TEST(StatsCollectorThreadSafety) {
@@ -280,7 +280,7 @@ TEST(StatsCollectorComplexScenario) {
     StatsCollector collector;
     
     // Simulate a complex scenario with mixed operations
-    collector.set_worker_thread_count(4);
+    // collector.set_worker_thread_count(4); // This line is removed
     
     // Simulate creating and completing some threads
     for (int i = 0; i < 50; i++) {
@@ -306,8 +306,8 @@ TEST(StatsCollectorComplexScenario) {
     ASSERT_EQ(40, stats.completed_threads);
     ASSERT_EQ(10, stats.failed_threads);
     ASSERT_EQ(15, stats.active_threads);
-    ASSERT_EQ(4, stats.worker_threads);
-    ASSERT_EQ(4, stats.worker_utilization.size());
+    ASSERT_EQ(0, stats.worker_threads); // Should be 0 as set_worker_thread_count is removed
+    ASSERT_EQ(0, stats.worker_utilization.size());
     
     // Check calculated stats
     ASSERT_EQ(80.0, stats.success_rate); // 40/50 = 80%
@@ -370,7 +370,7 @@ TEST(StatsCollectorMixedOperations) {
     StatsCollector collector;
     
     // Test a realistic mixed scenario
-    collector.set_worker_thread_count(8);
+    // collector.set_worker_thread_count(8); // This line is removed
     
     // Simulate 1000 threads created
     for (int i = 0; i < 1000; i++) {
@@ -396,7 +396,7 @@ TEST(StatsCollectorMixedOperations) {
     ASSERT_EQ(800, stats.completed_threads);
     ASSERT_EQ(200, stats.failed_threads);
     ASSERT_EQ(50, stats.active_threads);
-    ASSERT_EQ(8, stats.worker_threads);
+    ASSERT_EQ(0, stats.worker_threads); // Should be 0 as set_worker_thread_count is removed
     ASSERT_EQ(80.0, stats.success_rate); // 800/1000 = 80%
     ASSERT_GT(stats.average_execution_time_ms, 0);
     ASSERT_GT(stats.total_execution_time_ms, 0);

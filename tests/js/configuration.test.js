@@ -215,9 +215,9 @@ describe('Configuration Management Tests', () => {
 
   test('should handle configuration chaining', () => {
   const result = tasklets
-  .config({ workers: 2 })
-  .config({ timeout: 5000 })
-  .config({ logging: 'debug' });
+  .config({workers: 2})
+  .config({timeout: 5000})
+  .config({logging: 'debug'});
 
   expect(result).toBe(tasklets);
 
@@ -337,7 +337,7 @@ describe('Configuration Management Tests', () => {
 
   describe('worker configuration', () => {
   test('should auto-detect CPU cores', () => {
-  tasklets.config({ workers: 'auto' });
+  tasklets.config({workers: 'auto'});
 
   const stats = tasklets.getStats();
   const cpuCount = require('os').cpus().length;
@@ -346,14 +346,14 @@ describe('Configuration Management Tests', () => {
   });
 
   test('should handle explicit worker count', () => {
-  tasklets.config({ workers: 6 });
+  tasklets.config({workers: 6});
 
   const stats = tasklets.getStats();
   expect(stats.workers).toBe(6);
   });
 
   test('should handle worker count as string', () => {
-  tasklets.config({ workers: '8' });
+  tasklets.config({workers: '8'});
 
   const stats = tasklets.getStats();
   expect(stats.workers).toBe(8);
@@ -363,7 +363,7 @@ describe('Configuration Management Tests', () => {
   const testValues = [1, 2, 4, 8, 16, 32];
 
   testValues.forEach(workers => {
-  tasklets.config({ workers });
+  tasklets.config({workers});
 
   const stats = tasklets.getStats();
   expect(stats.workers).toBe(workers);
@@ -376,7 +376,7 @@ describe('Configuration Management Tests', () => {
   const timeouts = [100, 1000, 5000, 10000, 30000, 60000];
 
   timeouts.forEach(timeout => {
-  tasklets.config({ timeout });
+  tasklets.config({timeout});
 
   const stats = tasklets.getStats();
   expect(stats.config.timeout).toBe(timeout);
@@ -387,7 +387,7 @@ describe('Configuration Management Tests', () => {
   const edgeCases = [0, 1, -1, Number.MAX_SAFE_INTEGER];
 
   edgeCases.forEach(timeout => {
-  tasklets.config({ timeout });
+  tasklets.config({timeout});
 
   const stats = tasklets.getStats();
   expect(stats.config.timeout).toBe(timeout);
@@ -400,7 +400,7 @@ describe('Configuration Management Tests', () => {
   const levels = ['off', 'error', 'warn', 'info', 'debug', 'trace'];
 
   levels.forEach(level => {
-  tasklets.config({ logging: level });
+  tasklets.config({logging: level});
 
   const stats = tasklets.getStats();
   expect(stats.config.logging).toBe(level);
@@ -411,7 +411,7 @@ describe('Configuration Management Tests', () => {
   const cases = ['OFF', 'Error', 'WARN', 'Info', 'DEBUG', 'Trace'];
 
   cases.forEach(level => {
-  tasklets.config({ logging: level });
+  tasklets.config({logging: level});
 
   const stats = tasklets.getStats();
   expect(stats.config.logging).toBe(level);
@@ -424,7 +424,7 @@ describe('Configuration Management Tests', () => {
   const formats = ['512MB', '1GB', '2GB', '4GB', '1.5GB', '2048MB'];
 
   formats.forEach(maxMemory => {
-  tasklets.config({ maxMemory });
+  tasklets.config({maxMemory});
 
   const stats = tasklets.getStats();
   expect(stats.config.maxMemory).toBe(maxMemory);
@@ -435,7 +435,7 @@ describe('Configuration Management Tests', () => {
   const edgeCases = ['0MB', '1KB', '1TB', '999999MB'];
 
   edgeCases.forEach(maxMemory => {
-  tasklets.config({ maxMemory });
+  tasklets.config({maxMemory});
 
   const stats = tasklets.getStats();
   expect(stats.config.maxMemory).toBe(maxMemory);

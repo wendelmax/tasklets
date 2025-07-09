@@ -1,3 +1,14 @@
+/**
+ * @file mathematical-computations.js
+ * @description This example showcases the use of Tasklets for performing various mathematical and scientific computations in parallel.
+ * It includes demonstrations of:
+ * - Prime number generation using the Sieve of Eratosthenes.
+ * - Factorial calculations for large numbers.
+ * - Pi calculation using both the Leibniz formula and the Monte Carlo method.
+ * - Matrix multiplication.
+ * The `tasklets.runAll` function is used to execute these computationally intensive tasks concurrently,
+ * highlighting the performance benefits of parallel processing for CPU-bound operations.
+ */
 const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Mathematical & Scientific Computations\n');
@@ -81,7 +92,7 @@ class MathUtils {
 
   // Generate random matrix
   static generateMatrix(rows, cols) {
-  return Array(rows).fill().map(() => 
+  return Array(rows).fill().map(() =>
   Array(cols).fill().map(() => Math.random() * 10)
   );
   }
@@ -89,12 +100,12 @@ class MathUtils {
 
 (async () => {
 // Example 1: Prime number generation
-console.log('1. Prime Number Generation:');
-const startPrimes = Date.now();
+  console.log('1. Prime Number Generation:');
+  const startPrimes = Date.now();
 
 // Generate primes up to different limits in parallel
-const primeLimits = [10000, 20000, 30000, 40000, 50000];
-const primeResults = await tasklets.runAll(
+  const primeLimits = [10000, 20000, 30000, 40000, 50000];
+  const primeResults = await tasklets.runAll(
   primeLimits.map(limit => () => {
   console.log(`  Calculating primes up to ${limit}...`);
 
@@ -107,22 +118,22 @@ const primeResults = await tasklets.runAll(
   primes: primes.slice(-5) // Last 5 primes
   };
   })
-);
+  );
 
-const primeTime = Date.now() - startPrimes;
+  const primeTime = Date.now() - startPrimes;
 
-console.log('  Prime number results:');
-primeResults.forEach(result => {
+  console.log('  Prime number results:');
+  primeResults.forEach(result => {
   console.log(`  Up to ${result.limit}: ${result.count} primes, largest: ${result.largest}`);
   console.log(`  Last 5: [${result.primes.join(', ')}]`);
-});
-console.log(`  Total time: ${primeTime}ms\n`);
+  });
+  console.log(`  Total time: ${primeTime}ms\n`);
 
 // Example 2: Factorial calculations
-console.log('2. Factorial Calculations:');
-const factorialNumbers = [1000, 2000, 3000, 4000, 5000];
+  console.log('2. Factorial Calculations:');
+  const factorialNumbers = [1000, 2000, 3000, 4000, 5000];
 
-const factorialResults = await tasklets.runAll(
+  const factorialResults = await tasklets.runAll(
   factorialNumbers.map(n => () => {
   console.log(`  Calculating factorial of ${n}...`);
 
@@ -139,25 +150,25 @@ const factorialResults = await tasklets.runAll(
   firstDigits: result.toString().substring(0, 10)
   };
   })
-);
+  );
 
-console.log('  Factorial results:');
-factorialResults.forEach(result => {
+  console.log('  Factorial results:');
+  factorialResults.forEach(result => {
   console.log(`  ${result.n}! = ${result.result} (${result.digits} digits)`);
   console.log(`  First 10 digits: ${result.firstDigits}...`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 3: Pi calculation using different methods
-console.log('3. Pi Calculation (Multiple Methods):');
-const piMethods = [
-  { name: 'Leibniz', iterations: 1000000 },
-  { name: 'Monte Carlo', points: 1000000 },
-  { name: 'Leibniz', iterations: 2000000 },
-  { name: 'Monte Carlo', points: 2000000 }
-];
+  console.log('3. Pi Calculation (Multiple Methods):');
+  const piMethods = [
+  {name: 'Leibniz', iterations: 1000000},
+  {name: 'Monte Carlo', points: 1000000},
+  {name: 'Leibniz', iterations: 2000000},
+  {name: 'Monte Carlo', points: 2000000}
+  ];
 
-const piResults = await tasklets.runAll(
+  const piResults = await tasklets.runAll(
   piMethods.map(method => () => {
   console.log(`  Calculating Pi using ${method.name} (${method.iterations || method.points} iterations)...`);
 
@@ -179,22 +190,22 @@ const piResults = await tasklets.runAll(
   accuracy: accuracy
   };
   })
-);
+  );
 
-console.log('  Pi calculation results:');
-piResults.forEach(result => {
+  console.log('  Pi calculation results:');
+  piResults.forEach(result => {
   console.log(`  ${result.method} (${result.iterations} iterations):`);
   console.log(`  Calculated: ${result.calculatedPi.toFixed(10)}`);
   console.log(`  Error: ${result.error.toExponential(5)}`);
   console.log(`  Accuracy: ${result.accuracy.toFixed(3)}%`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 4: Matrix Operations:
-console.log('4. Matrix Operations:');
-const matrixSizes = [100, 200, 300, 400, 500];
+  console.log('4. Matrix Operations:');
+  const matrixSizes = [100, 200, 300, 400, 500];
 
-const matrixResults = await tasklets.runAll(
+  const matrixResults = await tasklets.runAll(
   matrixSizes.map(size => () => {
   console.log(`  Multiplying ${size}x${size} matrices...`);
 
@@ -206,7 +217,7 @@ const matrixResults = await tasklets.runAll(
   const result = MathUtils.matrixMultiply(matrixA, matrixB);
 
   // Calculate some statistics
-  const sum = result.reduce((rowSum, row) => 
+  const sum = result.reduce((rowSum, row) =>
   rowSum + row.reduce((colSum, val) => colSum + val, 0), 0
   );
   const avg = sum / (size * size);
@@ -218,24 +229,24 @@ const matrixResults = await tasklets.runAll(
   dimensions: `${size}x${size}`
   };
   })
-);
+  );
 
-console.log('  Matrix multiplication results:');
-matrixResults.forEach(result => {
+  console.log('  Matrix multiplication results:');
+  matrixResults.forEach(result => {
   console.log(`  ${result.dimensions}: sum=${result.resultSum.toFixed(2)}, avg=${result.average.toFixed(4)}`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 5: Complex mathematical series
-console.log('5. Mathematical Series Calculations:');
-const seriesConfigs = [
-  { name: 'Harmonic Series', terms: 1000000, fn: n => 1/n },
-  { name: 'Alternating Series', terms: 1000000, fn: n => Math.pow(-1, n+1) / n },
-  { name: 'Geometric Series', terms: 1000000, fn: n => Math.pow(0.5, n) },
-  { name: 'Power Series', terms: 1000000, fn: n => Math.pow(0.1, n) / n }
-];
+  console.log('5. Mathematical Series Calculations:');
+  const seriesConfigs = [
+  {name: 'Harmonic Series', terms: 1000000, fn: n => 1 / n},
+  {name: 'Alternating Series', terms: 1000000, fn: n => Math.pow(-1, n + 1) / n},
+  {name: 'Geometric Series', terms: 1000000, fn: n => Math.pow(0.5, n)},
+  {name: 'Power Series', terms: 1000000, fn: n => Math.pow(0.1, n) / n}
+  ];
 
-const seriesThreads = tasklets.spawnMany(seriesConfigs.length, (index) => {
+  const seriesThreads = tasklets.spawnMany(seriesConfigs.length, (index) => {
   const config = seriesConfigs[index];
   console.log(`  Calculating ${config.name} (${config.terms} terms)...`);
 
@@ -255,21 +266,21 @@ const seriesThreads = tasklets.spawnMany(seriesConfigs.length, (index) => {
   sum: sum,
   convergence: Math.abs(sum) < Infinity ? 'Convergent' : 'Divergent'
   };
-});
+  });
 
-const seriesResults = await tasklets.joinMany(seriesThreads);
+  const seriesResults = await tasklets.joinMany(seriesThreads);
 
-console.log('  Series calculation results:');
-seriesResults.forEach(result => {
+  console.log('  Series calculation results:');
+  seriesResults.forEach(result => {
   console.log(`  ${result.name}: ${result.sum.toFixed(10)} (${result.convergence})`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 6: Statistical computations
-console.log('6. Statistical Computations:');
-const dataSizes = [100000, 200000, 300000, 400000, 500000];
+  console.log('6. Statistical Computations:');
+  const dataSizes = [100000, 200000, 300000, 400000, 500000];
 
-const statsThreads = tasklets.spawnMany(dataSizes.length, (index) => {
+  const statsThreads = tasklets.spawnMany(dataSizes.length, (index) => {
   const size = dataSizes[index];
   console.log(`  Computing statistics for ${size} data points...`);
 
@@ -284,9 +295,9 @@ const statsThreads = tasklets.spawnMany(dataSizes.length, (index) => {
 
   // Sort for median
   const sorted = data.sort((a, b) => a - b);
-  const median = size % 2 === 0 
-  ? (sorted[size/2 - 1] + sorted[size/2]) / 2 
-  : sorted[Math.floor(size/2)];
+  const median = size % 2 === 0
+  ? (sorted[size / 2 - 1] + sorted[size / 2]) / 2
+  : sorted[Math.floor(size / 2)];
 
   return {
   size,
@@ -295,21 +306,21 @@ const statsThreads = tasklets.spawnMany(dataSizes.length, (index) => {
   stdDev: stdDev.toFixed(4),
   variance: variance.toFixed(4)
   };
-});
+  });
 
-const statsResults = await tasklets.joinMany(statsThreads);
+  const statsResults = await tasklets.joinMany(statsThreads);
 
-console.log('  Statistical results:');
-statsResults.forEach(result => {
+  console.log('  Statistical results:');
+  statsResults.forEach(result => {
   console.log(`  ${result.size} points: mean=${result.mean}, median=${result.median}, std=${result.stdDev}`);
-});
-console.log();
+  });
+  console.log();
 
 // Example 7: Performance analysis
-console.log('7. Performance Analysis:');
-const finalStats = tasklets.getStats();
+  console.log('7. Performance Analysis:');
+  const finalStats = tasklets.getStats();
 
-console.log('  Virtual threads performance:');
-console.log(`  Total fibers created: ${finalStats.totalFibers}`);
-console.log(`  Active fibers: ${finalStats.activeFibers}`);
-console.log(`
+  console.log('  Virtual threads performance:');
+  console.log(`  Total fibers created: ${finalStats.totalFibers}`);
+  console.log(`  Active fibers: ${finalStats.activeFibers}`);
+  console.log(`

@@ -1,3 +1,14 @@
+/**
+ * @file web-api.js
+ * @description This example demonstrates how to build a simple web API server that uses Tasklets to handle
+ * background processing for incoming requests. It includes:
+ * - A simulated in-memory database with asynchronous operations.
+ * - A request handler that offloads database queries and data processing to Tasklets, preventing the
+ *  main thread from being blocked.
+ * - Endpoints for fetching, creating, and updating user data, as well as running a complex analytics query.
+ * This example is useful for understanding how to integrate Tasklets into a web server to maintain
+ * responsiveness under load.
+ */
 const tasklets = require('../../lib/tasklets');
 const http = require('http');
 const url = require('url');
@@ -61,7 +72,7 @@ class UserDatabase {
   return null;
   }
 
-  const updatedUser = { ...user, ...updates, updatedAt: new Date().toISOString() };
+  const updatedUser = {...user, ...updates, updatedAt: new Date().toISOString()};
   this.users.set(userId, updatedUser);
   this.activeRequests--;
 
@@ -325,15 +336,15 @@ async function initializeDatabase() {
   console.log('Initializing database with sample users...');
 
   const sampleUsers = [
-  { name: 'Alice Johnson', age: 28, email: 'alice@example.com', posts: 45, followers: 1200 },
-  { name: 'Bob Smith', age: 32, email: 'bob@example.com', posts: 23, followers: 850 },
-  { name: 'Carol Davis', age: 25, email: 'carol@example.com', posts: 67, followers: 2100 },
-  { name: 'David Wilson', age: 35, email: 'david@example.com', posts: 12, followers: 450 },
-  { name: 'Eva Brown', age: 29, email: 'eva@example.com', posts: 89, followers: 3200 }
+  {name: 'Alice Johnson', age: 28, email: 'alice@example.com', posts: 45, followers: 1200},
+  {name: 'Bob Smith', age: 32, email: 'bob@example.com', posts: 23, followers: 850},
+  {name: 'Carol Davis', age: 25, email: 'carol@example.com', posts: 67, followers: 2100},
+  {name: 'David Wilson', age: 35, email: 'david@example.com', posts: 12, followers: 450},
+  {name: 'Eva Brown', age: 29, email: 'eva@example.com', posts: 89, followers: 3200}
   ];
 
   // Create users in parallel using virtual threads
-  const createdUsers = await tasklets.runAll(sampleUsers.map((user, index) => 
+  const createdUsers = await tasklets.runAll(sampleUsers.map((user, index) =>
   () => db.createUser(user)
   ));
 
@@ -396,7 +407,7 @@ async function handleRequest(method, path, body) {
 
 // Send HTTP response
 function sendResponse(res, response) {
-  res.writeHead(response.status, { 'Content-Type': 'application/json' });
+  res.writeHead(response.status, {'Content-Type': 'application/json'});
   res.end(JSON.stringify(response, null, 2));
 }
 
@@ -429,7 +440,7 @@ server.listen(PORT, async () => {
 
 // Add stats endpoint
 const originalHandleGet = handler.handleGet.bind(handler);
-handler.handleGet = async function(path, query) {
+handler.handleGet = async function (path, query) {
   if (path === '/stats') {
   const Taskletstats = tasklets.getStats();
   const handlerStats = this.getStats();
@@ -453,10 +464,20 @@ handler.handleGet = async function(path, query) {
 };
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('\nShutting down server...');
+  
+  // Set up shutdown event listener
+  tasklets.on('shutdown', () => {
+    console.log('Tasklets shutdown event received');
+  });
+  
   const finalStats = tasklets.getStats();
   console.log(`Final stats: ${finalStats.totalFibers} total fibers, ${finalStats.activeFibers} active`);
+  
+  // Use proper shutdown method (idempotent)
+  await tasklets.shutdown({ timeout: 2000 });
+  
   server.close(() => {
   console.log('Server stopped');
   process.exit(0);

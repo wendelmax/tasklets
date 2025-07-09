@@ -1,3 +1,10 @@
+/**
+ * @file visual-context-switching.js
+ * @description This example provides a visual demonstration of context switching between tasks running in Tasklets.
+ * It shows how tasks are executed concurrently and how the event loop is not blocked, allowing for responsive
+ * applications even during heavy computation. It includes a visual representation of task progress and
+ * main thread activity.
+ */
 const tasklets = require('../../lib/tasklets');
 
 (async () => {
@@ -18,10 +25,10 @@ const tasklets = require('../../lib/tasklets');
 
   // Update thread states
   if (fromThread) {
-  this.threadStates.set(fromThread, { state: 'yielded', timestamp });
+  this.threadStates.set(fromThread, {state: 'yielded', timestamp});
   }
   if (toThread) {
-  this.threadStates.set(toThread, { state: 'running', timestamp });
+  this.threadStates.set(toThread, {state: 'running', timestamp});
   }
 
   this.currentThread = toThread;
@@ -99,7 +106,7 @@ const tasklets = require('../../lib/tasklets');
   console.log('1. Visual Round-Robin Context Switching:');
   console.log('  Watch how threads take turns executing\n');
 
-  const visualResults = await tasklets.runAll(Array.from({ length: 3 }, (_, index) => async () => {
+  const visualResults = await tasklets.runAll(Array.from({length: 3}, (_, index) => async () => {
   const threadName = `Visual-${index}`;
   console.log(`\n  ${threadName} started`);
 
@@ -123,7 +130,7 @@ const tasklets = require('../../lib/tasklets');
   }
 
   console.log(`\n  ${threadName} completed all steps`);
-  return { thread: threadName, steps: 4 };
+  return {thread: threadName, steps: 4};
   }));
 
   console.log('\n  Visual round-robin results:', visualResults);
@@ -132,13 +139,13 @@ const tasklets = require('../../lib/tasklets');
   console.log('\n\n2. Priority-Based Visual Context Switching:');
   console.log('  High priority threads get more execution time\n');
 
-  const priorityVisualResults = await tasklets.runAll(Array.from({ length: 3 }, (_, index) => async () => {
+  const priorityVisualResults = await tasklets.runAll(Array.from({length: 3}, (_, index) => async () => {
   const priorities = ['High', 'Medium', 'Low'];
   const threadName = `Priority-${priorities[index]}`;
   const configs = [
-  { name: 'High', workUnits: 8000, yieldFreq: 1 },
-  { name: 'Medium', workUnits: 5000, yieldFreq: 2 },
-  { name: 'Low', workUnits: 2000, yieldFreq: 3 }
+  {name: 'High', workUnits: 8000, yieldFreq: 1},
+  {name: 'Medium', workUnits: 5000, yieldFreq: 2},
+  {name: 'Low', workUnits: 2000, yieldFreq: 3}
   ];
 
   const config = configs[index];
@@ -169,7 +176,7 @@ const tasklets = require('../../lib/tasklets');
   }
 
   console.log(`\n  ${threadName} completed (${steps} steps)`);
-  return { thread: threadName, priority: config.name, steps };
+  return {thread: threadName, priority: config.name, steps};
   }));
 
   console.log('\n  Priority visual results:', priorityVisualResults);
@@ -178,12 +185,12 @@ const tasklets = require('../../lib/tasklets');
   console.log('\n\n3. Workload-Based Visual Context Switching:');
   console.log('  Threads with different workloads cooperate\n');
 
-  const workloadVisualResults = await tasklets.runAll(Array.from({ length: 4 }, (_, index) => async () => {
+  const workloadVisualResults = await tasklets.runAll(Array.from({length: 4}, (_, index) => async () => {
   const workloads = [
-  { name: 'CPU-Heavy', workUnits: 10000, yieldFreq: 5000 },
-  { name: 'I/O-Sim', workUnits: 2000, yieldFreq: 1000 },
-  { name: 'Mixed', workUnits: 6000, yieldFreq: 3000 },
-  { name: 'Light', workUnits: 1000, yieldFreq: 500 }
+  {name: 'CPU-Heavy', workUnits: 10000, yieldFreq: 5000},
+  {name: 'I/O-Sim', workUnits: 2000, yieldFreq: 1000},
+  {name: 'Mixed', workUnits: 6000, yieldFreq: 3000},
+  {name: 'Light', workUnits: 1000, yieldFreq: 500}
   ];
 
   const workload = workloads[index];
@@ -206,7 +213,7 @@ const tasklets = require('../../lib/tasklets');
   }
 
   console.log(`\n  ${threadName} completed (${workload.name} workload, total work: ${totalWork.toFixed(2)})`);
-  return { thread: threadName, workload: workload.name, totalWork };
+  return {thread: threadName, workload: workload.name, totalWork};
   }));
 
   console.log('\n  Workload visual results:', workloadVisualResults);
@@ -215,7 +222,7 @@ const tasklets = require('../../lib/tasklets');
   console.log('\n\n4. Interactive Visual Context Switching:');
   console.log('  Threads respond to external events\n');
 
-  const interactiveVisualResults = await tasklets.runAll(Array.from({ length: 2 }, (_, index) => async () => {
+  const interactiveVisualResults = await tasklets.runAll(Array.from({length: 2}, (_, index) => async () => {
   const threadName = `Interactive-${index}`;
   console.log(`\n  ${threadName} started`);
 
@@ -239,7 +246,7 @@ const tasklets = require('../../lib/tasklets');
   }
 
   console.log(`\n  ${threadName} completed all events`);
-  return { thread: threadName, events: 5 };
+  return {thread: threadName, events: 5};
   }));
 
   console.log('\n  Interactive visual results:', interactiveVisualResults);

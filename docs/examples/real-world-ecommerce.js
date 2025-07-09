@@ -1,3 +1,12 @@
+/**
+ * @file real-world-ecommerce.js
+ * @description This example simulates a real-world e-commerce order processing system using Tasklets.
+ * It demonstrates how to handle complex workflows with multiple dependent tasks, such as checking inventory,
+ * processing payments, calculating shipping, and sending notifications.
+ * The example showcases how Tasklets can be used to manage I/O-bound and CPU-bound tasks in a concurrent
+ * and efficient manner, without blocking the main thread. It also includes context switching simulation
+ * to show how a long-running process can yield to other tasks.
+ */
 const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Real-World E-commerce Order Processing\n');
@@ -22,15 +31,15 @@ class EcommerceSystem {
 
   initializeInventory() {
   const products = [
-  { id: 'P001', name: 'Smartphone', price: 599.99, stock: 50 },
-  { id: 'P002', name: 'Laptop', price: 1299.99, stock: 25 },
-  { id: 'P003', name: 'Headphones', price: 199.99, stock: 100 },
-  { id: 'P004', name: 'Tablet', price: 399.99, stock: 30 },
-  { id: 'P005', name: 'Smartwatch', price: 299.99, stock: 75 }
+  {id: 'P001', name: 'Smartphone', price: 599.99, stock: 50},
+  {id: 'P002', name: 'Laptop', price: 1299.99, stock: 25},
+  {id: 'P003', name: 'Headphones', price: 199.99, stock: 100},
+  {id: 'P004', name: 'Tablet', price: 399.99, stock: 30},
+  {id: 'P005', name: 'Smartwatch', price: 299.99, stock: 75}
   ];
 
   products.forEach(product => {
-  this.inventory.set(product.id, { ...product });
+  this.inventory.set(product.id, {...product});
   });
   }
 
@@ -49,7 +58,7 @@ class EcommerceSystem {
   const available = product.stock >= quantity;
   console.log(`  ${available ? 'Inventory check: Available' : 'Inventory check: Insufficient stock'}`);
 
-  return { available, product, requestedQuantity: quantity };
+  return {available, product, requestedQuantity: quantity};
   }
 
   // Simulate payment processing with delay
@@ -73,10 +82,10 @@ class EcommerceSystem {
   });
 
   console.log(`  Payment processed: ${paymentId}`);
-  return { success: true, paymentId, amount };
+  return {success: true, paymentId, amount};
   } else {
   console.log(`  Payment failed for order ${orderId}`);
-  return { success: false, error: 'Payment declined' };
+  return {success: false, error: 'Payment declined'};
   }
   }
 
@@ -101,7 +110,7 @@ class EcommerceSystem {
   });
 
   console.log(`  Shipping calculated: $${shippingCost} (${estimatedDays} days)`);
-  return { shippingId, cost: shippingCost, estimatedDays };
+  return {shippingId, cost: shippingCost, estimatedDays};
   }
 
   // Simulate notification sending
@@ -134,8 +143,8 @@ class EcommerceSystem {
 
   this.analytics.ordersProcessed++;
   this.analytics.totalRevenue += orderData.totalAmount;
-  this.analytics.averageProcessingTime = 
-  (this.analytics.averageProcessingTime * (this.analytics.ordersProcessed - 1) + orderData.processingTime) / 
+  this.analytics.averageProcessingTime =
+  (this.analytics.averageProcessingTime * (this.analytics.ordersProcessed - 1) + orderData.processingTime) /
   this.analytics.ordersProcessed;
 
   console.log(`  Analytics updated: ${this.analytics.ordersProcessed} orders processed`);
@@ -175,8 +184,8 @@ class OrderProcessor {
   // Step 2: Payment processing (I/O-intensive)
   console.log(`  Step 2: Payment processing`);
   const paymentResult = await this.system.processPayment(
-  orderId, 
-  orderData.totalAmount, 
+  orderId,
+  orderData.totalAmount,
   orderData.paymentMethod
   );
 
@@ -254,7 +263,7 @@ class OrderProcessor {
   await this.system.sendNotification(
   orderData.customerId,
   'order_failed',
-  { orderId, error: error.message }
+  {orderId, error: error.message}
   );
 
   return {
@@ -303,21 +312,25 @@ class OrderProcessor {
   notifications.push(await this.system.sendNotification(
   orderData.customerId,
   'order_confirmed',
-  { orderId: orderData.orderId, totalAmount: orderData.totalAmount }
+  {orderId: orderData.orderId, totalAmount: orderData.totalAmount}
   ));
 
   // Payment confirmation
   notifications.push(await this.system.sendNotification(
   orderData.customerId,
   'payment_confirmed',
-  { orderId: orderData.orderId, paymentId: paymentResult.paymentId }
+  {orderId: orderData.orderId, paymentId: paymentResult.paymentId}
   ));
 
   // Shipping confirmation
   notifications.push(await this.system.sendNotification(
   orderData.customerId,
   'shipping_confirmed',
-  { orderId: orderData.orderId, shippingId: shippingResult.shippingId, estimatedDays: shippingResult.estimatedDays }
+  {
+  orderId: orderData.orderId,
+  shippingId: shippingResult.shippingId,
+  estimatedDays: shippingResult.estimatedDays
+  }
   ));
 
   return notifications;
@@ -382,8 +395,8 @@ async function runEcommerceExample() {
   customerId: 'CUST-001',
   customerName: 'John Smith',
   items: [
-  { productId: 'P001', quantity: 1, weight: 0.5 },
-  { productId: 'P003', quantity: 2, weight: 0.3 }
+  {productId: 'P001', quantity: 1, weight: 0.5},
+  {productId: 'P003', quantity: 2, weight: 0.3}
   ],
   totalAmount: 999.97,
   paymentMethod: 'credit_card',
@@ -394,8 +407,8 @@ async function runEcommerceExample() {
   customerId: 'CUST-002',
   customerName: 'Jane Doe',
   items: [
-  { productId: 'P002', quantity: 1, weight: 2.5 },
-  { productId: 'P005', quantity: 1, weight: 0.2 }
+  {productId: 'P002', quantity: 1, weight: 2.5},
+  {productId: 'P005', quantity: 1, weight: 0.2}
   ],
   totalAmount: 1599.98,
   paymentMethod: 'paypal',
@@ -406,8 +419,8 @@ async function runEcommerceExample() {
   customerId: 'CUST-003',
   customerName: 'Bob Johnson',
   items: [
-  { productId: 'P004', quantity: 1, weight: 1.0 },
-  { productId: 'P003', quantity: 1, weight: 0.3 }
+  {productId: 'P004', quantity: 1, weight: 1.0},
+  {productId: 'P003', quantity: 1, weight: 0.3}
   ],
   totalAmount: 599.98,
   paymentMethod: 'credit_card',
@@ -418,8 +431,8 @@ async function runEcommerceExample() {
   customerId: 'CUST-004',
   customerName: 'Alice Brown',
   items: [
-  { productId: 'P001', quantity: 2, weight: 1.0 },
-  { productId: 'P005', quantity: 1, weight: 0.2 }
+  {productId: 'P001', quantity: 2, weight: 1.0},
+  {productId: 'P005', quantity: 1, weight: 0.2}
   ],
   totalAmount: 1499.97,
   paymentMethod: 'bank_transfer',
@@ -430,7 +443,7 @@ async function runEcommerceExample() {
   customerId: 'CUST-005',
   customerName: 'Charlie Wilson',
   items: [
-  { productId: 'P002', quantity: 1, weight: 2.5 }
+  {productId: 'P002', quantity: 1, weight: 2.5}
   ],
   totalAmount: 1299.99,
   paymentMethod: 'credit_card',

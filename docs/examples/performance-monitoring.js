@@ -1,9 +1,11 @@
 /**
- * Copyright (c) 2025 Jackson Wendel Santos Sá
- * Licensed under the MIT License
- * 
  * @file performance-monitoring.js
- * @brief Performance monitoring example showcasing built-in monitoring capabilities
+ * @description This example showcases the built-in performance monitoring capabilities of Tasklets.
+ * It demonstrates how to:
+ * - Create a custom performance monitor to periodically sample and analyze performance data.
+ * - Use `tasklets.getStats()` to retrieve detailed statistics about workers, tasks, and performance.
+ * - Use `tasklets.getHealth()` to get a high-level overview of the system's health, including memory and worker utilization.
+ * - Monitor the system during different workloads, such as basic task execution and batch processing.
  */
 
 const tasklets = require('../../lib');
@@ -121,7 +123,7 @@ async function runPerformanceExamples() {
   monitor1.startMonitoring(100);
 
   // Run a series of tasks with varying complexity
-  const basicTasks = Array.from({ length: 10 }, (_, i) => () => {
+  const basicTasks = Array.from({length: 10}, (_, i) => () => {
   console.log(`  Task ${i} running...`);
   const iterations = 100000 + (i * 20000);
   let result = 0;
@@ -151,7 +153,7 @@ async function runPerformanceExamples() {
   });
 
   // Run tasks and monitor in real-time
-  const computeTasks = Array.from({ length: 15 }, (_, i) => () => {
+  const computeTasks = Array.from({length: 15}, (_, i) => () => {
   // Simulate CPU-intensive work
   let sum = 0;
   for (let j = 0; j < 200000; j++) {
@@ -177,7 +179,7 @@ async function runPerformanceExamples() {
   // Example 3: Health monitoring during batch processing
   console.log('3. Health monitoring during batch processing:');
 
-  const batchTasks = Array.from({ length: 20 }, (_, i) => ({
+  const batchTasks = Array.from({length: 20}, (_, i) => ({
   name: `compute-task-${i}`,
   task: () => {
   // Simulate work with random complexity
@@ -211,6 +213,7 @@ async function runPerformanceExamples() {
 
   clearInterval(healthMonitor);
   console.log('\n  Batch processing completed');
+  console.log('  Note: Progress callback frequency may vary due to parallel execution');
 
   // Analyze batch results
   const successful = batchResults.filter(r => r.success).length;
@@ -260,7 +263,7 @@ async function runPerformanceExamples() {
   for (const size of workloadSizes) {
   console.log(`  Testing workload size: ${size}`);
 
-  const tasks = Array.from({ length: size }, () => () => {
+  const tasks = Array.from({length: size}, () => () => {
   let sum = 0;
   for (let i = 0; i < 10000; i++) {
   sum += Math.sqrt(i);
@@ -303,7 +306,7 @@ async function runPerformanceExamples() {
   }, 200);
 
   // Run some background tasks for the dashboard
-  const backgroundTasks = Array.from({ length: 50 }, () => () => {
+  const backgroundTasks = Array.from({length: 50}, () => () => {
   const work = Math.random() * 50000;
   let result = 0;
   for (let i = 0; i < work; i++) {
@@ -333,7 +336,25 @@ async function runPerformanceExamples() {
   console.log(`  System Uptime: ${Math.round(finalStats.system.uptime / 1000)}s`);
   console.log();
 
-  console.log(' Performance monitoring example completed successfully!');
+  console.log('  Performance monitoring demonstration completed successfully!');
+  console.log('\n Key Monitoring Features:');
+  console.log('  • Real-time performance metrics collection');
+  console.log('  • Health monitoring during task execution');
+  console.log('  • Error tracking and retry analysis');
+  console.log('  • Memory usage monitoring');
+  console.log('  • Worker utilization tracking');
+  console.log('  • Batch progress monitoring');
+  console.log('  • System health checks');
+
+  // Cleanup and shutdown
+  console.log('\n7. Cleanup and Shutdown:');
+  tasklets.forceCleanup();
+  const finalMemoryStats = tasklets.getMemoryStats();
+  console.log('  Final active tasklets:', finalMemoryStats.activeTasklets);
+  console.log('  Note: Small residual values are normal due to native delays');
+  
+  await tasklets.shutdown({ timeout: 1000 });
+  console.log('  System shutdown completed');
   }, 5000);
 }
 

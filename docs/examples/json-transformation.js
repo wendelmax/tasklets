@@ -1,3 +1,14 @@
+/**
+ * @file json-transformation.js
+ * @description This example demonstrates how to perform JSON data transformation and analysis in parallel using Tasklets.
+ * The script performs the following steps:
+ * 1. Generates a sample dataset of JSON objects (user records).
+ * 2. Transforms the dataset in parallel. Each record is processed and mapped to a new format.
+ * 3. Runs multiple analysis tasks on the transformed data in parallel. This includes calculating
+ *  age distribution, department statistics, and grade distribution.
+ * This example is useful for understanding how to parallelize data-heavy transformation and
+ * analysis pipelines.
+ */
 const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - JSON Transformation Example\n');
@@ -20,7 +31,7 @@ function generateSampleData(size = 10000) {
   lastName,
   email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
   birthDate: new Date(Date.now() - Math.random() * 30 * 365 * 24 * 60 * 60 * 1000).toISOString(),
-  scores: Array.from({ length: 5 }, () => Math.floor(Math.random() * 100)),
+  scores: Array.from({length: 5}, () => Math.floor(Math.random() * 100)),
   isActive: Math.random() > 0.2,
   department: ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance'][Math.floor(Math.random() * 5)]
   });
@@ -70,7 +81,7 @@ async function transformDataset(dataset) {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  batches.map((batch, index) => 
+  batches.map((batch, index) =>
   () => {
   console.log(`  Processing batch ${index + 1}...`);
   return batch.map(record => transformRecord(record));
@@ -92,14 +103,14 @@ async function analyzeTransformedData(data) {
   const analysisPromises = [
   // Age distribution
   () => {
-  const ageGroups = { '20-29': 0, '30-39': 0, '40-49': 0, '50+': 0 };
+  const ageGroups = {'20-29': 0, '30-39': 0, '40-49': 0, '50+': 0};
   data.forEach(record => {
   if (record.age < 30) ageGroups['20-29']++;
   else if (record.age < 40) ageGroups['30-39']++;
   else if (record.age < 50) ageGroups['40-49']++;
   else ageGroups['50+']++;
   });
-  return { analysis: 'age-distribution', result: ageGroups };
+  return {analysis: 'age-distribution', result: ageGroups};
   },
 
   // Department statistics
@@ -123,16 +134,16 @@ async function analyzeTransformedData(data) {
   deptStats[dept].activeRate = deptStats[dept].activeCount / deptStats[dept].count;
   });
 
-  return { analysis: 'department-stats', result: deptStats };
+  return {analysis: 'department-stats', result: deptStats};
   },
 
   // Grade distribution
   () => {
-  const gradeDistribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+  const gradeDistribution = {A: 0, B: 0, C: 0, D: 0, F: 0};
   data.forEach(record => {
   gradeDistribution[record.grade]++;
   });
-  return { analysis: 'grade-distribution', result: gradeDistribution };
+  return {analysis: 'grade-distribution', result: gradeDistribution};
   },
 
   // Performance metrics

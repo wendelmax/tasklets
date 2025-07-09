@@ -31,6 +31,9 @@
 #include <iostream>
 #include <cstring>
 
+// Test files are compiled separately by the build script
+// No need to include them here
+
 void print_usage(const char* program_name) {
     std::cout << "Usage: " << program_name << " [options] [test_name]" << std::endl;
     std::cout << "Options:" << std::endl;

@@ -1,3 +1,16 @@
+/**
+ * @file real-time-processing.js
+ * @description This example simulates a real-time data processing system using Tasklets.
+ * It consists of three main components:
+ * 1. A `DataStreamSimulator` that generates a continuous stream of data events.
+ * 2. A `LiveDataProcessor` that processes the incoming data in parallel, using a queue to manage
+ *  backpressure and a limited number of concurrent tasks. Each data processing task is executed
+ *  in a separate tasklet using `tasklets.run()`.
+ * 3. A `RealTimeAnalytics` class that monitors the performance of the data processor and generates
+ *  alerts based on predefined thresholds.
+ * This example is a good demonstration of how to build a responsive, high-throughput, real-time
+ * processing system.
+ */
 const tasklets = require('../../lib/tasklets');
 const EventEmitter = require('events');
 
@@ -24,12 +37,12 @@ class LiveDataProcessor extends EventEmitter {
   if (this.activeTasks >= this.maxConcurrent) {
   if (this.queue.length > 100) { // Drop data if queue is too long
   this.stats.dropped++;
-  this.emit('dropped', { data, reason: 'queue_full' });
+  this.emit('dropped', {data, reason: 'queue_full'});
   return null;
   }
 
   return new Promise((resolve) => {
-  this.queue.push({ data, resolve });
+  this.queue.push({data, resolve});
   });
   }
 
@@ -96,7 +109,7 @@ class LiveDataProcessor extends EventEmitter {
 
   processQueue() {
   if (this.queue.length > 0 && this.activeTasks < this.maxConcurrent) {
-  const { data, resolve } = this.queue.shift();
+  const {data, resolve} = this.queue.shift();
   resolve(this.executeTask(data));
   }
   }
@@ -121,7 +134,7 @@ class LiveDataProcessor extends EventEmitter {
 
   const typeStats = this.processingHistory.reduce((acc, h) => {
   if (!acc[h.dataType]) {
-  acc[h.dataType] = { count: 0, totalTime: 0 };
+  acc[h.dataType] = {count: 0, totalTime: 0};
   }
   acc[h.dataType].count++;
   acc[h.dataType].totalTime += h.processingTime;
@@ -380,7 +393,7 @@ async function batchProcessingWithMonitoring() {
   const processor = new LiveDataProcessor(6);
 
   // Generate batch data
-  const batchData = Array.from({ length: totalItems }, (_, i) => ({
+  const batchData = Array.from({length: totalItems}, (_, i) => ({
   id: i + 1,
   type: ['sensor', 'user_action', 'system_metric'][Math.floor(Math.random() * 3)],
   value: Math.random() * 1000,

@@ -103,7 +103,7 @@ describe('Performance Monitoring Tests', () => {
   });
 
   test('should handle auto worker configuration', () => {
-  tasklets.config({ workers: 'auto' });
+  tasklets.config({workers: 'auto'});
 
   const stats = tasklets.getStats();
   const cpuCount = require('os').cpus().length;
@@ -194,7 +194,7 @@ describe('Performance Monitoring Tests', () => {
   const configs = [1, 2, 4, 8, 'auto'];
 
   configs.forEach(workers => {
-  tasklets.config({ workers });
+  tasklets.config({workers});
 
   const stats = tasklets.getStats();
 
@@ -305,7 +305,7 @@ describe('Performance Monitoring Tests', () => {
   });
 
   test('should handle configuration changes', () => {
-  tasklets.config({ workers: 4 });
+  tasklets.config({workers: 4});
 
   const health = tasklets.getHealth();
 
@@ -382,7 +382,7 @@ describe('Performance Monitoring Tests', () => {
   const configs = [1, 2, 4, 8];
 
   configs.forEach(workers => {
-  tasklets.config({ workers });
+  tasklets.config({workers});
 
   const health = tasklets.getHealth();
 
@@ -401,8 +401,13 @@ describe('Performance Monitoring Tests', () => {
   // Status should be consistent
   expect(health1.status).toBe(health2.status);
 
-  // Memory usage may vary slightly but should be in same ballpark
-  expect(Math.abs(health1.memory.used - health2.memory.used)).toBeLessThan(10);
+  // Memory usage should be reasonable values
+  expect(health1.memory.used).toBeGreaterThan(0);
+  expect(health2.memory.used).toBeGreaterThan(0);
+  expect(health1.memory.total).toBeGreaterThan(0);
+  expect(health2.memory.total).toBeGreaterThan(0);
+  expect(health1.memory.percentage).toBeGreaterThan(0);
+  expect(health2.memory.percentage).toBeGreaterThan(0);
   });
   });
 

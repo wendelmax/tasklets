@@ -36,7 +36,7 @@ describe('Core API Tests', () => {
 
   test('should execute a task with object data', async () => {
   const result = await tasklets.run(() => {
-  return { name: 'test', value: 123 };
+  return {name: 'test', value: 123};
   });
 
   expect(typeof result).toBe('string');
@@ -70,7 +70,9 @@ describe('Core API Tests', () => {
   () => 42,
   () => "string",
   () => true,
-  () => { key: 'value' },
+  () => {
+  key: 'value'
+  },
   () => [1, 2, 3],
   () => null,
   () => undefined
@@ -97,7 +99,7 @@ describe('Core API Tests', () => {
   test('should handle task with custom timeout', async () => {
   const result = await tasklets.run(() => {
   return "completed";
-  }, { timeout: 1000 });
+  }, {timeout: 1000});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -107,7 +109,7 @@ describe('Core API Tests', () => {
   // Note: Current native module doesn't properly handle timeouts
   const result = await tasklets.run(() => {
   return "completed";
-  }, { timeout: 1 });
+  }, {timeout: 1});
 
   expect(typeof result).toBe('string');
   expect(result).toBe('Task completed successfully');
@@ -196,7 +198,7 @@ describe('Core API Tests', () => {
   });
 
   test('should handle large number of tasks', async () => {
-  const tasks = Array.from({ length: 10 }, (_, i) => () => i);
+  const tasks = Array.from({length: 10}, (_, i) => () => i);
   const results = await tasklets.runAll(tasks);
 
   expect(results.length).toBe(10);
@@ -215,7 +217,9 @@ describe('Core API Tests', () => {
   test('should handle mixed successful and error tasks', async () => {
   const tasks = [
   () => 42,
-  () => { throw new Error('Test error'); },
+  () => {
+  throw new Error('Test error');
+  },
   () => "success"
   ];
 
@@ -232,15 +236,17 @@ describe('Core API Tests', () => {
   describe('batch() function', () => {
   test('should execute batch of tasks with progress tracking', async () => {
   const taskConfigs = [
-  { name: 'task1', task: () => 1 },
-  { name: 'task2', task: () => 2 },
-  { name: 'task3', task: () => 3 }
+  {name: 'task1', task: () => 1},
+  {name: 'task2', task: () => 2},
+  {name: 'task3', task: () => 3}
   ];
 
   let progressCallCount = 0;
+  const progressData = [];
   const results = await tasklets.batch(taskConfigs, {
   onProgress: (progress) => {
   progressCallCount++;
+  progressData.push(progress);
   expect(progress).toHaveProperty('completed');
   expect(progress).toHaveProperty('total');
   expect(progress).toHaveProperty('percentage');
@@ -251,7 +257,13 @@ describe('Core API Tests', () => {
   });
 
   expect(results.length).toBe(3);
-  expect(progressCallCount).toBe(3);
+  // Progress should be called at least once per task, but may be called more due to parallel execution
+  expect(progressCallCount).toBeGreaterThanOrEqual(3);
+  
+  // Verify final progress data shows all tasks completed
+  const finalProgress = progressData[progressData.length - 1];
+  expect(finalProgress.completed).toBe(3);
+  expect(finalProgress.percentage).toBe(100);
 
   results.forEach((result, index) => {
   expect(result).toHaveProperty('name');
@@ -265,8 +277,12 @@ describe('Core API Tests', () => {
 
   test('should handle batch with errors', async () => {
   const taskConfigs = [
-  { name: 'success', task: () => 42 },
-  { name: 'error', task: () => { throw new Error('Test error'); } }
+  {name: 'success', task: () => 42},
+  {
+  name: 'error', task: () => {
+  throw new Error('Test error');
+  }
+  }
   ];
 
   const results = await tasklets.batch(taskConfigs);
@@ -286,8 +302,8 @@ describe('Core API Tests', () => {
 
   test('should handle batch without progress callback', async () => {
   const taskConfigs = [
-  { task: () => 1 },
-  { task: () => 2 }
+  {task: () => 1},
+  {task: () => 2}
   ];
 
   const results = await tasklets.batch(taskConfigs);
@@ -315,7 +331,7 @@ describe('Core API Tests', () => {
 
   test('should reject invalid task configuration', async () => {
   const taskConfigs = [
-  { name: 'invalid', task: "not a function" }
+  {name: 'invalid', task: "not a function"}
   ];
 
   await expect(tasklets.batch(taskConfigs)).rejects.toThrow('Each task configuration must have a task function');
@@ -399,7 +415,7 @@ describe('Core API Tests', () => {
   const sequentialTime = Date.now() - sequentialStart;
 
   const parallelStart = Date.now();
-  const tasks = Array.from({ length: 4 }, () => () => {
+  const tasks = Array.from({length: 4}, () => () => {
   let sum = 0;
   for (let i = 0; i < 25000; i++) {
   sum += i;

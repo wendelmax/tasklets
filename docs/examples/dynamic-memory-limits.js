@@ -1,3 +1,12 @@
+/**
+ * @file dynamic-memory-limits.js
+ * @description This example demonstrates memory-aware task management with Tasklets.
+ * It shows how to:
+ * - Monitor memory usage during task execution using `process.memoryUsage()` and `os.freemem()`.
+ * - Process tasks in batches to control memory consumption.
+ * - Implement a strategy to dynamically adjust task creation based on available memory, preventing the system from being overloaded.
+ * This is useful for long-running applications or batch processing systems that handle large amounts of data.
+ */
 const tasklets = require('../../lib/tasklets');
 const os = require('os');
 
@@ -46,9 +55,9 @@ async function memoryAwareTest() {
   console.log(`Batch ${batch + 1}/${batches} - Memory before: ${memBefore.usedMemoryMB}MB (${memBefore.memoryUsagePercentage}%)`);
 
   // Create tasks that use some memory
-  const tasks = Array.from({ length: batchSize }, (_, i) => () => {
+  const tasks = Array.from({length: batchSize}, (_, i) => () => {
   // Simulate some memory usage with different random values
-  const data = Array.from({ length: 1000 }, () => Math.random());
+  const data = Array.from({length: 1000}, () => Math.random());
 
   // Do some work
   let sum = 0;
@@ -112,10 +121,10 @@ async function memoryMonitoringTest() {
 
   try {
   // Create tasks with varying memory usage
-  const tasks = Array.from({ length: taskCount }, (_, i) => () => {
+  const tasks = Array.from({length: taskCount}, (_, i) => () => {
   // Variable workload - larger and more intensive
   const workSize = Math.floor(Math.random() * 5000) + 2000;
-  const data = Array.from({ length: workSize }, () => Math.random());
+  const data = Array.from({length: workSize}, () => Math.random());
 
   // Simulate CPU and memory work - more intensive
   for (let j = 0; j < workSize; j++) {

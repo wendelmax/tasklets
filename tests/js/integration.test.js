@@ -6,17 +6,26 @@ const tasklets = require('../../lib/index');
 
 describe('Integration Tests', () => {
   beforeEach(() => {
-  // Configure tasklets for integration testing
-  tasklets.config({
-  workers: 4,
-  timeout: 30000,
-  logging: 'off'
+    // Configure tasklets for integration testing
+    tasklets.config({
+      workers: 4,
+      timeout: 30000,
+      logging: 'off'
+    });
   });
+
+  afterEach(async () => {
+    // Clean up resources after each test
+    try {
+      await tasklets.shutdown(1000);
+    } catch (error) {
+      console.warn('Error during test cleanup:', error);
+    }
   });
 
   describe('data processing pipelines', () => {
   test('should handle multi-stage data transformation pipeline', async () => {
-  const rawData = Array.from({ length: 100 }, (_, i) => ({ id: i, value: Math.random() * 100 }));
+  const rawData = Array.from({length: 100}, (_, i) => ({id: i, value: Math.random() * 100}));
 
   // Stage 1: Data validation and filtering
   const validationResults = await tasklets.batch(
@@ -40,10 +49,10 @@ describe('Integration Tests', () => {
 
   // Stage 2: Data transformation
   const transformResults = await tasklets.runAll(
-  Array.from({ length: 5 }, (_, i) => () => {
+  Array.from({length: 5}, (_, i) => () => {
   // Simulate complex transformation
   return rawData.slice(i * 10, (i + 1) * 10)
-  .map(item => ({ ...item, processed: true, timestamp: Date.now() }));
+  .map(item => ({...item, processed: true, timestamp: Date.now()}));
   })
   );
 
@@ -68,9 +77,9 @@ describe('Integration Tests', () => {
   });
 
   test('should handle streaming data processing with backpressure', async () => {
-  const streamChunks = Array.from({ length: 20 }, (_, i) => ({
+  const streamChunks = Array.from({length: 20}, (_, i) => ({
   chunkId: i,
-  data: Array.from({ length: 50 }, (_, j) => i * 50 + j)
+  data: Array.from({length: 50}, (_, j) => i * 50 + j)
   }));
 
   // Process chunks in batches to simulate backpressure handling
@@ -85,7 +94,7 @@ describe('Integration Tests', () => {
   // Simulate chunk processing
   const sum = chunk.data.reduce((acc, val) => acc + val, 0);
   const avg = sum / chunk.data.length;
-  return { chunkId: chunk.chunkId, sum, avg, processed: true };
+  return {chunkId: chunk.chunkId, sum, avg, processed: true};
   })
   );
 
@@ -104,7 +113,7 @@ describe('Integration Tests', () => {
   });
 
   test('should handle error recovery in data pipeline', async () => {
-  const dataItems = Array.from({ length: 10 }, (_, i) => ({ id: i, value: i }));
+  const dataItems = Array.from({length: 10}, (_, i) => ({id: i, value: i}));
 
   // Process with some items that will "fail"
   const results = await tasklets.batch(
@@ -115,7 +124,7 @@ describe('Integration Tests', () => {
   if (item.id === 3 || item.id === 7) {
   throw new Error(`Processing failed for item ${item.id}`);
   }
-  return { ...item, processed: true };
+  return {...item, processed: true};
   }
   }))
   );
@@ -142,7 +151,7 @@ describe('Integration Tests', () => {
 
   // Run parallel simulations
   const simulationResults = await tasklets.runAll(
-  Array.from({ length: workerCount }, (_, i) => () => {
+  Array.from({length: workerCount}, (_, i) => () => {
   let insideCircle = 0;
 
   for (let j = 0; j < iterationsPerWorker; j++) {
@@ -225,7 +234,7 @@ describe('Integration Tests', () => {
 
   describe('web scraping simulation', () => {
   test('should handle concurrent web scraping with rate limiting', async () => {
-  const urls = Array.from({ length: 20 }, (_, i) => `https://api.example.com/data/${i}`);
+  const urls = Array.from({length: 20}, (_, i) => `https://api.example.com/data/${i}`);
 
   // Simulate web scraping with rate limiting (process in batches)
   const batchSize = 5;
@@ -246,7 +255,7 @@ describe('Integration Tests', () => {
   return {
   url,
   responseType,
-  data: responseType === 'success' ? { items: Math.floor(Math.random() * 100) } : null,
+  data: responseType === 'success' ? {items: Math.floor(Math.random() * 100)} : null,
   timestamp: Date.now(),
   processingTime: delay
   };
@@ -267,10 +276,10 @@ describe('Integration Tests', () => {
   });
 
   test('should handle retry logic for failed web requests', async () => {
-  const failingUrls = Array.from({ length: 5 }, (_, i) => `https://unreliable-api.com/endpoint/${i}`);
+  const failingUrls = Array.from({length: 5}, (_, i) => `https://unreliable-api.com/endpoint/${i}`);
 
   const retryResults = await Promise.all(
-  failingUrls.map(url => 
+  failingUrls.map(url =>
   tasklets.retry(() => {
   // Simulate unreliable API
   const shouldFail = Math.random() < 0.7; // 70% failure rate
@@ -281,7 +290,7 @@ describe('Integration Tests', () => {
 
   return {
   url,
-  data: { success: true, timestamp: Date.now() },
+  data: {success: true, timestamp: Date.now()},
   attempts: 1
   };
   }, {
@@ -302,7 +311,7 @@ describe('Integration Tests', () => {
 
   describe('image processing simulation', () => {
   test('should handle parallel image processing pipeline', async () => {
-  const images = Array.from({ length: 12 }, (_, i) => ({
+  const images = Array.from({length: 12}, (_, i) => ({
   id: i,
   filename: `image_${i}.jpg`,
   width: 1920,
@@ -332,9 +341,9 @@ describe('Integration Tests', () => {
 
   // Stage 2: Image transformations (resize, filter, compress)
   const transformationTasks = [
-  { name: 'resize', operation: 'resize', params: { width: 800, height: 600 } },
-  { name: 'blur', operation: 'filter', params: { type: 'gaussian', radius: 2 } },
-  { name: 'compress', operation: 'compress', params: { quality: 85 } }
+  {name: 'resize', operation: 'resize', params: {width: 800, height: 600}},
+  {name: 'blur', operation: 'filter', params: {type: 'gaussian', radius: 2}},
+  {name: 'compress', operation: 'compress', params: {quality: 85}}
   ];
 
   const transformResults = await tasklets.batch(
@@ -363,7 +372,7 @@ describe('Integration Tests', () => {
   });
 
   test('should handle image processing with memory management', async () => {
-  const largeImages = Array.from({ length: 8 }, (_, i) => ({
+  const largeImages = Array.from({length: 8}, (_, i) => ({
   id: i,
   filename: `large_image_${i}.tiff`,
   width: 4096,
@@ -410,10 +419,10 @@ describe('Integration Tests', () => {
   describe('database operations simulation', () => {
   test('should handle concurrent database operations', async () => {
   const operations = [
-  { type: 'SELECT', table: 'users', conditions: { active: true } },
-  { type: 'INSERT', table: 'orders', data: { userId: 1, amount: 100 } },
-  { type: 'UPDATE', table: 'products', data: { stock: 50 }, conditions: { id: 1 } },
-  { type: 'DELETE', table: 'logs', conditions: { createdAt: { lt: '2023-01-01' } } }
+  {type: 'SELECT', table: 'users', conditions: {active: true}},
+  {type: 'INSERT', table: 'orders', data: {userId: 1, amount: 100}},
+  {type: 'UPDATE', table: 'products', data: {stock: 50}, conditions: {id: 1}},
+  {type: 'DELETE', table: 'logs', conditions: {createdAt: {lt: '2023-01-01'}}}
   ];
 
   const dbResults = await tasklets.runAll(
@@ -441,11 +450,11 @@ describe('Integration Tests', () => {
 
   test('should handle database transaction simulation', async () => {
   const transactionSteps = [
-  { step: 1, query: 'BEGIN TRANSACTION' },
-  { step: 2, query: 'INSERT INTO orders (user_id, amount) VALUES (?, ?)' },
-  { step: 3, query: 'UPDATE users SET balance = balance - ? WHERE id = ?' },
-  { step: 4, query: 'INSERT INTO audit_log (action, user_id) VALUES (?, ?)' },
-  { step: 5, query: 'COMMIT' }
+  {step: 1, query: 'BEGIN TRANSACTION'},
+  {step: 2, query: 'INSERT INTO orders (user_id, amount) VALUES (?, ?)'},
+  {step: 3, query: 'UPDATE users SET balance = balance - ? WHERE id = ?'},
+  {step: 4, query: 'INSERT INTO audit_log (action, user_id) VALUES (?, ?)'},
+  {step: 5, query: 'COMMIT'}
   ];
 
   // Execute transaction steps sequentially
@@ -483,10 +492,10 @@ describe('Integration Tests', () => {
 
   describe('e-commerce order processing', () => {
   test('should handle complete order processing workflow', async () => {
-  const orders = Array.from({ length: 10 }, (_, i) => ({
+  const orders = Array.from({length: 10}, (_, i) => ({
   orderId: `ORD-${1000 + i}`,
   customerId: `CUST-${100 + i}`,
-  items: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
+  items: Array.from({length: Math.floor(Math.random() * 3) + 1}, (_, j) => ({
   productId: `PROD-${j + 1}`,
   quantity: Math.floor(Math.random() * 5) + 1,
   price: Math.random() * 100 + 10
@@ -555,13 +564,13 @@ describe('Integration Tests', () => {
 
   test('should handle order processing with inventory constraints', async () => {
   const products = [
-  { id: 'PROD-1', stock: 5 },
-  { id: 'PROD-2', stock: 2 },
-  { id: 'PROD-3', stock: 0 },
-  { id: 'PROD-4', stock: 10 }
+  {id: 'PROD-1', stock: 5},
+  {id: 'PROD-2', stock: 2},
+  {id: 'PROD-3', stock: 0},
+  {id: 'PROD-4', stock: 10}
   ];
 
-  const orders = Array.from({ length: 8 }, (_, i) => ({
+  const orders = Array.from({length: 8}, (_, i) => ({
   orderId: `ORD-${2000 + i}`,
   productId: products[i % products.length].id,
   requestedQuantity: Math.floor(Math.random() * 3) + 1
@@ -593,7 +602,7 @@ describe('Integration Tests', () => {
 
   describe('data analytics pipeline', () => {
   test('should handle real-time analytics processing', async () => {
-  const events = Array.from({ length: 1000 }, (_, i) => ({
+  const events = Array.from({length: 1000}, (_, i) => ({
   eventId: i,
   userId: Math.floor(Math.random() * 100),
   eventType: ['page_view', 'click', 'purchase', 'signup'][Math.floor(Math.random() * 4)],
@@ -619,14 +628,14 @@ describe('Integration Tests', () => {
   batch.forEach(event => {
   eventCounts[event.eventType] = (eventCounts[event.eventType] || 0) + 1;
   });
-  return { type: 'aggregation', data: eventCounts };
+  return {type: 'aggregation', data: eventCounts};
   },
   () => {
   // User activity analysis
   const userActivity = {};
   batch.forEach(event => {
   if (!userActivity[event.userId]) {
-  userActivity[event.userId] = { events: 0, lastSeen: 0 };
+  userActivity[event.userId] = {events: 0, lastSeen: 0};
   }
   userActivity[event.userId].events++;
   userActivity[event.userId].lastSeen = Math.max(
@@ -634,7 +643,7 @@ describe('Integration Tests', () => {
   event.timestamp
   );
   });
-  return { type: 'user_activity', data: userActivity };
+  return {type: 'user_activity', data: userActivity};
   },
   () => {
   // Fraud detection
@@ -642,7 +651,7 @@ describe('Integration Tests', () => {
   // Simple fraud detection logic
   return event.eventType === 'purchase' && Math.random() < 0.05;
   });
-  return { type: 'fraud_detection', data: suspiciousActivity };
+  return {type: 'fraud_detection', data: suspiciousActivity};
   }
   ]);
 
@@ -657,7 +666,7 @@ describe('Integration Tests', () => {
   });
 
   test('should handle complex data aggregation and reporting', async () => {
-  const salesData = Array.from({ length: 500 }, (_, i) => ({
+  const salesData = Array.from({length: 500}, (_, i) => ({
   saleId: i,
   productCategory: ['electronics', 'clothing', 'books', 'home'][Math.floor(Math.random() * 4)],
   amount: Math.random() * 500 + 10,
@@ -672,29 +681,29 @@ describe('Integration Tests', () => {
   // Revenue by category report
   const categoryRevenue = {};
   salesData.forEach(sale => {
-  categoryRevenue[sale.productCategory] = 
+  categoryRevenue[sale.productCategory] =
   (categoryRevenue[sale.productCategory] || 0) + sale.amount;
   });
-  return { report: 'category_revenue', data: categoryRevenue };
+  return {report: 'category_revenue', data: categoryRevenue};
   },
   () => {
   // Regional performance report
   const regionalPerformance = {};
   salesData.forEach(sale => {
   if (!regionalPerformance[sale.region]) {
-  regionalPerformance[sale.region] = { sales: 0, revenue: 0 };
+  regionalPerformance[sale.region] = {sales: 0, revenue: 0};
   }
   regionalPerformance[sale.region].sales++;
   regionalPerformance[sale.region].revenue += sale.amount;
   });
-  return { report: 'regional_performance', data: regionalPerformance };
+  return {report: 'regional_performance', data: regionalPerformance};
   },
   () => {
   // Sales rep performance report
   const repPerformance = {};
   salesData.forEach(sale => {
   if (!repPerformance[sale.salesRep]) {
-  repPerformance[sale.salesRep] = { sales: 0, revenue: 0, avgSale: 0 };
+  repPerformance[sale.salesRep] = {sales: 0, revenue: 0, avgSale: 0};
   }
   repPerformance[sale.salesRep].sales++;
   repPerformance[sale.salesRep].revenue += sale.amount;
@@ -702,11 +711,11 @@ describe('Integration Tests', () => {
 
   // Calculate averages
   Object.keys(repPerformance).forEach(rep => {
-  repPerformance[rep].avgSale = 
+  repPerformance[rep].avgSale =
   repPerformance[rep].revenue / repPerformance[rep].sales;
   });
 
-  return { report: 'sales_rep_performance', data: repPerformance };
+  return {report: 'sales_rep_performance', data: repPerformance};
   },
   () => {
   // Time-based trend analysis
@@ -714,12 +723,12 @@ describe('Integration Tests', () => {
   salesData.forEach(sale => {
   const day = new Date(sale.timestamp).toDateString();
   if (!dailyTrends[day]) {
-  dailyTrends[day] = { sales: 0, revenue: 0 };
+  dailyTrends[day] = {sales: 0, revenue: 0};
   }
   dailyTrends[day].sales++;
   dailyTrends[day].revenue += sale.amount;
   });
-  return { report: 'daily_trends', data: dailyTrends };
+  return {report: 'daily_trends', data: dailyTrends};
   }
   ]);
 
@@ -746,14 +755,14 @@ describe('Integration Tests', () => {
   for (let j = 0; j < 100000; j++) {
   sum += Math.sqrt(j);
   }
-  return { type: 'cpu', result: sum };
+  return {type: 'cpu', result: sum};
   });
   break;
 
   case 1: // Memory intensive
   mixedOperations.push(() => {
   const data = new Array(10000).fill(0).map(() => Math.random());
-  return { type: 'memory', size: data.length, checksum: data.reduce((a, b) => a + b, 0) };
+  return {type: 'memory', size: data.length, checksum: data.reduce((a, b) => a + b, 0)};
   });
   break;
 
@@ -761,8 +770,9 @@ describe('Integration Tests', () => {
   mixedOperations.push(() => {
   // Simulate I/O delay
   const start = Date.now();
-  while (Date.now() - start < 10) { /* busy wait */ }
-  return { type: 'io', duration: Date.now() - start };
+  while (Date.now() - start < 10) { /* busy wait */
+  }
+  return {type: 'io', duration: Date.now() - start};
   });
   break;
 
@@ -771,13 +781,13 @@ describe('Integration Tests', () => {
   if (Math.random() < 0.2) {
   throw new Error('Simulated error');
   }
-  return { type: 'error_prone', success: true };
+  return {type: 'error_prone', success: true};
   });
   break;
 
   case 4: // Quick task
   mixedOperations.push(() => {
-  return { type: 'quick', timestamp: Date.now() };
+  return {type: 'quick', timestamp: Date.now()};
   });
   break;
   }
@@ -818,7 +828,7 @@ describe('Integration Tests', () => {
   switch (workType) {
   case 0:
   // Light computation
-  return Array.from({ length: 100 }, (_, i) => i * 2).reduce((a, b) => a + b, 0);
+  return Array.from({length: 100}, (_, i) => i * 2).reduce((a, b) => a + b, 0);
 
   case 1:
   // Medium computation
@@ -830,8 +840,8 @@ describe('Integration Tests', () => {
 
   case 2:
   // Heavy computation
-  const matrix = Array.from({ length: 100 }, () => 
-  Array.from({ length: 100 }, () => Math.random())
+  const matrix = Array.from({length: 100}, () =>
+  Array.from({length: 100}, () => Math.random())
   );
   return matrix.map(row => row.reduce((a, b) => a + b, 0));
 

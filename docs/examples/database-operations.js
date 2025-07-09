@@ -1,3 +1,14 @@
+/**
+ * @file database-operations.js
+ * @description This example simulates parallel database operations using Tasklets.
+ * It demonstrates how to handle various database-related tasks concurrently:
+ * - Executing multiple database queries in parallel.
+ * - Running multiple database transactions concurrently.
+ * - Performing database analytics by running a set of aggregation queries in parallel.
+ * - Simulating a database connection pool to handle a large number of operations.
+ * The database functions are simulations and do not require a real database connection. This example
+ * is useful for understanding how to manage I/O-bound database workloads.
+ */
 const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Database Operations Example\n');
@@ -50,21 +61,27 @@ function executeTransaction(operations) {
 
 async function parallelDatabaseQueries() {
   const queries = [
-  { query: 'SELECT * FROM users WHERE active = ?', params: [true] },
-  { query: 'SELECT * FROM orders WHERE date > ?', params: ['2023-01-01'] },
-  { query: 'SELECT * FROM products WHERE category = ?', params: ['electronics'] },
-  { query: 'SELECT * FROM reviews WHERE rating >= ?', params: [4] },
-  { query: 'SELECT * FROM inventory WHERE quantity < ?', params: [10] },
-  { query: 'SELECT u.name, COUNT(o.id) as order_count FROM users u JOIN orders o ON u.id = o.user_id GROUP BY u.id', params: [] },
-  { query: 'SELECT p.name, AVG(r.rating) as avg_rating FROM products p JOIN reviews r ON p.id = r.product_id GROUP BY p.id', params: [] },
-  { query: 'SELECT * FROM customers WHERE last_login < ?', params: ['2023-06-01'] }
+  {query: 'SELECT * FROM users WHERE active = ?', params: [true]},
+  {query: 'SELECT * FROM orders WHERE date > ?', params: ['2023-01-01']},
+  {query: 'SELECT * FROM products WHERE category = ?', params: ['electronics']},
+  {query: 'SELECT * FROM reviews WHERE rating >= ?', params: [4]},
+  {query: 'SELECT * FROM inventory WHERE quantity < ?', params: [10]},
+  {
+  query: 'SELECT u.name, COUNT(o.id) as order_count FROM users u JOIN orders o ON u.id = o.user_id GROUP BY u.id',
+  params: []
+  },
+  {
+  query: 'SELECT p.name, AVG(r.rating) as avg_rating FROM products p JOIN reviews r ON p.id = r.product_id GROUP BY p.id',
+  params: []
+  },
+  {query: 'SELECT * FROM customers WHERE last_login < ?', params: ['2023-06-01']}
   ];
 
   console.log('Executing database queries in parallel...');
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  queries.map(({ query, params }) => 
+  queries.map(({query, params}) =>
   () => queryDatabase(query, params)
   )
   );
@@ -120,7 +137,7 @@ async function parallelTransactions() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  transactions.map(operations => 
+  transactions.map(operations =>
   () => executeTransaction(operations)
   )
   );

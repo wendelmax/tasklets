@@ -1,4 +1,12 @@
-const tasklets = require('tasklets');
+/**
+ * @file prime-numbers.js
+ * @description This example demonstrates how to find prime numbers in parallel using Tasklets.
+ * It includes two main scenarios:
+ * 1. Finding all prime numbers within a set of given ranges. The ranges are processed in parallel.
+ * 2. Checking the primality of a list of large numbers, with each check performed in parallel.
+ * This is a classic example of a CPU-bound task that can be significantly sped up through parallelization.
+ */
+const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Prime Numbers Example\n');
 
@@ -38,7 +46,7 @@ async function findPrimesParallel() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  ranges.map(chunk => 
+  ranges.map(chunk =>
   () => findPrimesInRange(chunk.start, chunk.end)
   )
   );

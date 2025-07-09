@@ -28,7 +28,7 @@
  */
 
 #include "cctest.h"
-#include "../../src/core/logger.hpp"
+#include "../../src/core/base/logger.hpp"
 #include <thread>
 #include <vector>
 #include <sstream>

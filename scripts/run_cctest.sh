@@ -1,134 +1,245 @@
 #!/bin/bash
 
-# Script to build and run C++ tests (cctest) for Tasklets
+# Tasklets C++ Test Suite Runner
+# This script compiles and runs the cctest suite
 
-set -e  # Exit on any error
+set -e
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Configuration
+BUILD_DIR="build"
+TEST_DIR="tests/cctest"
+SRC_DIR="src"
+CCTEST_BINARY="${BUILD_DIR}/cctest"
+
+# Compiler settings
+CXX=${CXX:-g++}
+CXXFLAGS="-std=c++17 -Wall -Wextra -O2 -g"
+INCLUDES="-I${SRC_DIR} -I${TEST_DIR}"
+LIBS="-luv -lpthread"
 
 # Function to print colored output
 print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if we're in the right directory
-if [ ! -f "binding.gyp" ]; then
-    print_error "binding.gyp not found. Please run this script from the project root."
-    exit 1
-fi
+# Function to check dependencies
+check_dependencies() {
+    print_status "Checking dependencies..."
+    
+    if ! command -v $CXX &> /dev/null; then
+        print_error "Compiler $CXX not found"
+        exit 1
+    fi
+    
+    if ! pkg-config --exists libuv; then
+        print_warning "libuv not found via pkg-config, trying direct linking"
+    fi
+    
+    print_success "Dependencies check completed"
+}
 
-# Check if node-gyp is available
-if ! command -v node-gyp &> /dev/null; then
-    print_error "node-gyp not found. Please install it with: npm install -g node-gyp"
-    exit 1
-fi
+# Function to create build directory
+create_build_dir() {
+    print_status "Creating build directory..."
+    mkdir -p $BUILD_DIR
+    print_success "Build directory ready"
+}
 
-# Parse command line arguments
-VERBOSE=false
-LIST_ONLY=false
-SPECIFIC_TEST=""
-CLEAN_BUILD=false
+# Function to compile tests
+compile_tests() {
+    print_status "Compiling test suite..."
+    
+    # Source files
+    SRC_FILES=(
+        "${TEST_DIR}/cctest.cpp"
+        "${TEST_DIR}/test_runner.cpp"
+        "${TEST_DIR}/test_tasklet.cpp"
+        "${TEST_DIR}/test_microjob.cpp"
+        "${TEST_DIR}/test_native_thread_pool.cpp"
+        "${TEST_DIR}/test_stats.cpp"
+        "${TEST_DIR}/test_logger.cpp"
+        "${TEST_DIR}/test_auto_config.cpp"
+        "${TEST_DIR}/test_memory_manager.cpp"
+        "${TEST_DIR}/test_auto_scheduler.cpp"
+    )
+    
+    # Implementation files (if they exist)
+    IMPL_FILES=(
+        "${SRC_DIR}/core/base/tasklet.cpp"
+        "${SRC_DIR}/core/base/microjob.cpp"
+        "${SRC_DIR}/core/base/logger.cpp"
+        "${SRC_DIR}/core/monitoring/stats.cpp"
+        "${SRC_DIR}/core/threading/native_thread_pool.cpp"
+        "${SRC_DIR}/core/threading/multiprocessor.cpp"
+        "${SRC_DIR}/core/automation/auto_config.cpp"
+        "${SRC_DIR}/core/automation/auto_scheduler.cpp"
+        "${SRC_DIR}/core/memory/memory_manager.cpp"
+    )
+    
+    # Build command
+    CMD="$CXX $CXXFLAGS $INCLUDES"
+    
+    # Add source files that exist
+    for file in "${SRC_FILES[@]}"; do
+        if [ -f "$file" ]; then
+            CMD="$CMD $file"
+        else
+            print_warning "Source file not found: $file"
+        fi
+    done
+    
+    # Add implementation files that exist
+    for file in "${IMPL_FILES[@]}"; do
+        if [ -f "$file" ]; then
+            CMD="$CMD $file"
+        else
+            print_warning "Implementation file not found: $file"
+        fi
+    done
+    
+    CMD="$CMD -o $CCTEST_BINARY $LIBS"
+    
+    print_status "Running: $CMD"
+    eval $CMD
+    
+    if [ $? -eq 0 ]; then
+        print_success "Compilation successful"
+    else
+        print_error "Compilation failed"
+        exit 1
+    fi
+}
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -v|--verbose)
-            VERBOSE=true
-            shift
-            ;;
-        -l|--list)
-            LIST_ONLY=true
-            shift
-            ;;
-        -c|--clean)
-            CLEAN_BUILD=true
-            shift
-            ;;
-        -t|--test)
-            SPECIFIC_TEST="$2"
-            shift 2
-            ;;
-        -h|--help)
-            echo "Usage: $0 [OPTIONS]"
-            echo "Options:"
-            echo "  -v, --verbose    Run tests with verbose output"
-            echo "  -l, --list       List available tests"
-            echo "  -c, --clean      Clean build before running tests"
-            echo "  -t, --test NAME  Run specific test by name"
-            echo "  -h, --help       Show this help message"
+# Function to run tests
+run_tests() {
+    print_status "Running test suite..."
+    
+    if [ ! -f "$CCTEST_BINARY" ]; then
+        print_error "Test binary not found: $CCTEST_BINARY"
+        exit 1
+    fi
+    
+    # Parse command line arguments
+    VERBOSE=""
+    TEST_NAME=""
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -v|--verbose)
+                VERBOSE="-v"
+                shift
+                ;;
+            -l|--list)
+                $CCTEST_BINARY -l
+                exit 0
+                ;;
+            -h|--help)
+                $CCTEST_BINARY -h
+                exit 0
+                ;;
+            *)
+                TEST_NAME="$1"
+                shift
+                ;;
+        esac
+    done
+    
+    # Run tests
+    if [ -n "$TEST_NAME" ]; then
+        print_status "Running specific test: $TEST_NAME"
+        $CCTEST_BINARY $VERBOSE "$TEST_NAME"
+    else
+        print_status "Running all tests"
+        $CCTEST_BINARY $VERBOSE
+    fi
+    
+    if [ $? -eq 0 ]; then
+        print_success "All tests passed!"
+    else
+        print_error "Some tests failed"
+        exit 1
+    fi
+}
+
+# Function to clean build
+clean_build() {
+    print_status "Cleaning build directory..."
+    rm -rf $BUILD_DIR
+    print_success "Build directory cleaned"
+}
+
+# Main execution
+main() {
+    print_status "Tasklets C++ Test Suite Runner"
+    echo "======================================"
+    
+    # Parse command line arguments
+    case "${1:-}" in
+        clean)
+            clean_build
             exit 0
             ;;
-        *)
-            print_error "Unknown option: $1"
-            exit 1
+        compile)
+            check_dependencies
+            create_build_dir
+            compile_tests
+            exit 0
+            ;;
+        run)
+            shift
+            run_tests "$@"
+            exit 0
+            ;;
+        -h|--help)
+            echo "Usage: $0 [command] [options]"
+            echo ""
+            echo "Commands:"
+            echo "  compile    Compile the test suite"
+            echo "  run        Run the test suite (default)"
+            echo "  clean      Clean build directory"
+            echo ""
+            echo "Options for run command:"
+            echo "  -v, --verbose  Enable verbose output"
+            echo "  -l, --list     List all available tests"
+            echo "  -h, --help     Show this help message"
+            echo "  [test_name]    Run specific test"
+            echo ""
+            echo "Examples:"
+            echo "  $0                    # Compile and run all tests"
+            echo "  $0 run -v             # Run all tests with verbose output"
+            echo "  $0 run TaskletConstruction  # Run specific test"
+            echo "  $0 run -l             # List all tests"
+            echo "  $0 compile            # Only compile"
+            echo "  $0 clean              # Clean build"
+            exit 0
             ;;
     esac
-done
+    
+    # Default: compile and run
+    check_dependencies
+    create_build_dir
+    compile_tests
+    run_tests "$@"
+}
 
-# Clean build if requested
-if [ "$CLEAN_BUILD" = true ]; then
-    print_status "Cleaning previous build..."
-    node-gyp clean || true
-    rm -f build/Release/cctest || true
-fi
-
-# Build cctest executable
-print_status "Building cctest executable..."
-if ! node-gyp configure; then
-    print_error "Failed to configure cctest build"
-    exit 1
-fi
-
-if ! node-gyp build; then
-    print_error "Failed to build cctest"
-    exit 1
-fi
-
-# Check if the executable was created
-CCTEST_EXE="build/Release/cctest"
-if [ ! -f "$CCTEST_EXE" ]; then
-    print_error "cctest executable not found at $CCTEST_EXE"
-    exit 1
-fi
-
-print_status "cctest built successfully"
-
-# Prepare arguments for cctest
-CCTEST_ARGS=""
-if [ "$VERBOSE" = true ]; then
-    CCTEST_ARGS="$CCTEST_ARGS -v"
-fi
-
-if [ "$LIST_ONLY" = true ]; then
-    CCTEST_ARGS="$CCTEST_ARGS -l"
-fi
-
-if [ -n "$SPECIFIC_TEST" ]; then
-    CCTEST_ARGS="$CCTEST_ARGS $SPECIFIC_TEST"
-fi
-
-# Run cctest
-print_status "Running cctest..."
-echo
-
-if ./"$CCTEST_EXE" $CCTEST_ARGS; then
-    echo
-    print_status "All tests completed successfully!"
-    exit 0
-else
-    TEST_EXIT_CODE=$?
-    echo
-    print_error "Tests failed with exit code $TEST_EXIT_CODE"
-    exit $TEST_EXIT_CODE
-fi 
+# Run main function with all arguments
+main "$@" 

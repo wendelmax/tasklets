@@ -1,3 +1,14 @@
+/**
+ * @file web-api-load-test.js
+ * @description This example demonstrates how to use Tasklets to simulate a load test on a web API.
+ * It defines an `APILoadTester` class that simulates multiple users making concurrent requests to a local server.
+ * The `tasklets.runAll()` function is used to run the user simulations in parallel.
+ * After the test, it analyzes and prints detailed results, including success rate, requests per second,
+ * and response times for different API endpoints.
+ *
+ * NOTE: This example requires a local web server running on http://localhost:3000.
+ * You can use the `docs/examples/web-api.js` example as a simple server for this test.
+ */
 const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - API Load Testing Example\n');
@@ -136,7 +147,7 @@ class APILoadTester {
 
   // Create tasklets for each user
   const allResults = await tasklets.runAll(
-  Array.from({ length: userCount }, (_, index) => 
+  Array.from({length: userCount}, (_, index) =>
   () => this.simulateUser(index + 1, requestsPerUser)
   )
   );
@@ -205,7 +216,7 @@ class APILoadTester {
   printResults(results) {
   console.log('Load Test Results\n');
 
-  const { summary, typeStats, Taskletstats } = results;
+  const {summary, typeStats, Taskletstats} = results;
 
   console.log('Summary:');
   console.log(`  Total time: ${summary.totalTime}ms`);
@@ -286,14 +297,14 @@ async function runLoadTestExample() {
 
   // Test with different user counts
   const testScenarios = [
-  { users: 5, requests: 3, name: 'Light Load' },
-  { users: 10, requests: 5, name: 'Medium Load' },
-  { users: 20, requests: 3, name: 'Heavy Load' }
+  {users: 5, requests: 3, name: 'Light Load'},
+  {users: 10, requests: 5, name: 'Medium Load'},
+  {users: 20, requests: 3, name: 'Heavy Load'}
   ];
 
   for (const scenario of testScenarios) {
   console.log(`\n${scenario.name} Test (${scenario.users} users, ${scenario.requests} requests each)`);
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
 
   const results = await tester.runLoadTest(scenario.users, scenario.requests);
   tester.printResults(results);

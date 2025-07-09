@@ -1,3 +1,11 @@
+/**
+ * @file adaptive-batch-processing.js
+ * @description This example demonstrates the concept of adaptive batch processing based on system capabilities.
+ * It compares a fixed-size batch processing approach with an adaptive one where the batch size is dynamically
+ * calculated based on the number of CPU cores. This ensures optimal throughput and resource utilization
+ * across different systems without manual tuning. The example processes a number of items and shows the
+ * performance difference between the two methods.
+ */
 const tasklets = require('../../lib/tasklets');
 const os = require('os');
 
@@ -35,16 +43,15 @@ async function oldFixedBatchProcessing() {
 
   for (let i = 0; i < TOTAL_ITEMS; i += FIXED_BATCH_SIZE) {
   const batchEnd = Math.min(i + FIXED_BATCH_SIZE, TOTAL_ITEMS);
+  const start = i;
 
-  const taskletId = tasklets.spawn(() => {
+  await tasklets.run(() => {
   let sum = 0;
-  for (let j = i; j < batchEnd; j++) {
+  for (let j = start; j < batchEnd; j++) {
   sum += Math.sqrt(j);
   }
   return sum;
   });
-
-  await tasklets.join(taskletId);
   }
 
   const duration = Date.now() - startTime;
@@ -68,16 +75,15 @@ async function newAdaptiveBatchProcessing() {
 
   for (let i = 0; i < TOTAL_ITEMS; i += ADAPTIVE_BATCH_SIZE) {
   const batchEnd = Math.min(i + ADAPTIVE_BATCH_SIZE, TOTAL_ITEMS);
+  const start = i;
 
-  const taskletId = tasklets.spawn(() => {
+  await tasklets.run(() => {
   let sum = 0;
-  for (let j = i; j < batchEnd; j++) {
+  for (let j = start; j < batchEnd; j++) {
   sum += Math.sqrt(j);
   }
   return sum;
   });
-
-  await tasklets.join(taskletId);
   }
 
   const duration = Date.now() - startTime;

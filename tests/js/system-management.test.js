@@ -28,7 +28,7 @@ describe('System Management Tests', () => {
   await tasklets.run(() => 'test task');
 
   // Shutdown with custom timeout
-  await expect(tasklets.shutdown({ timeout: 5000 })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: 5000})).resolves.toBeUndefined();
   });
 
   test('should shutdown gracefully with short timeout', async () => {
@@ -36,7 +36,7 @@ describe('System Management Tests', () => {
   await tasklets.run(() => 'test task');
 
   // Shutdown with short timeout
-  await expect(tasklets.shutdown({ timeout: 100 })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: 100})).resolves.toBeUndefined();
   });
 
   test('should shutdown gracefully with zero timeout', async () => {
@@ -44,7 +44,7 @@ describe('System Management Tests', () => {
   await tasklets.run(() => 'test task');
 
   // Shutdown with zero timeout
-  await expect(tasklets.shutdown({ timeout: 0 })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: 0})).resolves.toBeUndefined();
   });
 
   test('should shutdown gracefully with negative timeout', async () => {
@@ -52,16 +52,21 @@ describe('System Management Tests', () => {
   await tasklets.run(() => 'test task');
 
   // Shutdown with negative timeout (should be handled gracefully)
-  await expect(tasklets.shutdown({ timeout: -1000 })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: -1000})).resolves.toBeUndefined();
   });
 
   test('should shutdown gracefully with very large timeout', async () => {
   // Run some tasks first
   await tasklets.run(() => 'test task');
 
-  // Shutdown with large timeout
-  await expect(tasklets.shutdown({ timeout: 999999 })).resolves.toBeUndefined();
-  });
+  // Shutdown should work with large timeout but not actually wait that long
+  const startTime = Date.now();
+  await expect(tasklets.shutdown({timeout: 30000})).resolves.toBeUndefined();
+  const endTime = Date.now();
+  
+  // Should not actually wait the full timeout
+  expect(endTime - startTime).toBeLessThan(10000);
+  }, 20000);
 
   test('should shutdown when no tasks are running', async () => {
   // Shutdown without running any tasks
@@ -107,8 +112,8 @@ describe('System Management Tests', () => {
   test('should handle shutdown after batch operations', async () => {
   // Run batch operations
   await tasklets.batch([
-  { name: 'batch1', task: () => 'batch1' },
-  { name: 'batch2', task: () => 'batch2' }
+  {name: 'batch1', task: () => 'batch1'},
+  {name: 'batch2', task: () => 'batch2'}
   ]);
 
   // Shutdown should complete successfully
@@ -117,7 +122,7 @@ describe('System Management Tests', () => {
 
   test('should handle shutdown after retry operations', async () => {
   // Run retry operations
-  await tasklets.retry(() => 'retry task', { attempts: 3 });
+  await tasklets.retry(() => 'retry task', {attempts: 3});
 
   // Shutdown should complete successfully
   await expect(tasklets.shutdown()).resolves.toBeUndefined();
@@ -127,13 +132,13 @@ describe('System Management Tests', () => {
   const configs = [1, 2, 4, 8];
 
   for (const workers of configs) {
-  tasklets.config({ workers });
+  tasklets.config({workers});
 
   // Run a task
   await tasklets.run(() => 'config test');
 
   // Shutdown should work with any configuration
-  await expect(tasklets.shutdown({ timeout: 1000 })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: 1000})).resolves.toBeUndefined();
   }
   });
 
@@ -141,22 +146,29 @@ describe('System Management Tests', () => {
   // Run some tasks
   await tasklets.run(() => 'test task');
 
-  // First shutdown
-  await expect(tasklets.shutdown()).resolves.toBeUndefined();
+  // First shutdown with shorter timeout
+  await expect(tasklets.shutdown({timeout: 1000})).resolves.toBeUndefined();
 
-  // Additional shutdown calls should not cause errors
+  // Additional shutdown calls should not cause errors and return immediately
+  const startTime = Date.now();
   await expect(tasklets.shutdown()).resolves.toBeUndefined();
   await expect(tasklets.shutdown()).resolves.toBeUndefined();
-  });
+  const endTime = Date.now();
+  
+  // Multiple shutdown calls should return quickly (not wait for timeout)
+  // Since the first shutdown already completed, subsequent calls should be immediate
+  // Allow a bit more time for the event loop and promise resolution
+  expect(endTime - startTime).toBeLessThan(2000);
+  }, 15000);
 
   test('should handle shutdown with invalid timeout types', async () => {
   // Run some tasks first
   await tasklets.run(() => 'test task');
 
   // These should be handled gracefully
-  await expect(tasklets.shutdown({ timeout: "invalid" })).resolves.toBeUndefined();
-  await expect(tasklets.shutdown({ timeout: {} })).resolves.toBeUndefined();
-  await expect(tasklets.shutdown({ timeout: [] })).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: "invalid"})).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: {}})).resolves.toBeUndefined();
+  await expect(tasklets.shutdown({timeout: []})).resolves.toBeUndefined();
   });
   });
 
@@ -182,9 +194,9 @@ describe('System Management Tests', () => {
 
   test('should handle configuration through native module', () => {
   // Configuration should work
-  expect(() => tasklets.config({ workers: 2 })).not.toThrow();
-  expect(() => tasklets.config({ timeout: 5000 })).not.toThrow();
-  expect(() => tasklets.config({ logging: 'debug' })).not.toThrow();
+  expect(() => tasklets.config({workers: 2})).not.toThrow();
+  expect(() => tasklets.config({timeout: 5000})).not.toThrow();
+  expect(() => tasklets.config({logging: 'debug'})).not.toThrow();
   });
 
   test('should handle statistics through native module', () => {
@@ -214,7 +226,7 @@ describe('System Management Tests', () => {
   const originalStats = tasklets.getStats();
 
   // Configure workers
-  tasklets.config({ workers: 4 });
+  tasklets.config({workers: 4});
 
   const newStats = tasklets.getStats();
   expect(newStats.workers).toBe(4);
@@ -224,7 +236,7 @@ describe('System Management Tests', () => {
   const levels = ['off', 'error', 'warn', 'info', 'debug', 'trace'];
 
   levels.forEach(level => {
-  expect(() => tasklets.config({ logging: level })).not.toThrow();
+  expect(() => tasklets.config({logging: level})).not.toThrow();
 
   const stats = tasklets.getStats();
   expect(stats.config.logging).toBe(level);
@@ -232,7 +244,7 @@ describe('System Management Tests', () => {
   });
 
   test('should handle auto worker detection', () => {
-  tasklets.config({ workers: 'auto' });
+  tasklets.config({workers: 'auto'});
 
   const stats = tasklets.getStats();
   const cpuCount = require('os').cpus().length;
@@ -315,8 +327,12 @@ describe('System Management Tests', () => {
   test('should handle multiple event listeners', () => {
   let count = 0;
 
-  const listener1 = () => { count += 1; };
-  const listener2 = () => { count += 2; };
+  const listener1 = () => {
+  count += 1;
+  };
+  const listener2 = () => {
+  count += 2;
+  };
 
   tasklets.on('multi-event', listener1);
   tasklets.on('multi-event', listener2);
@@ -353,7 +369,7 @@ describe('System Management Tests', () => {
 
   tasklets.on('data-event', listener);
 
-  const testData = { message: 'test', value: 42 };
+  const testData = {message: 'test', value: 42};
   tasklets.emit('data-event', testData);
 
   expect(receivedData).toEqual(testData);
@@ -391,13 +407,16 @@ describe('System Management Tests', () => {
 
   // Run a task then shutdown
   await tasklets.run(() => 'test');
-  await tasklets.shutdown();
 
+  // Shutdown with a reasonable timeout
+  await tasklets.shutdown({timeout: 1000});
+
+  // The event should be emitted during shutdown
   expect(shutdownReceived).toBe(true);
 
   // Clean up
   tasklets.removeListener('shutdown', shutdownListener);
-  });
+  }, 10000);
 
   test('should handle once listeners', () => {
   let callCount = 0;
@@ -417,8 +436,10 @@ describe('System Management Tests', () => {
   });
 
   test('should handle listener count', () => {
-  const listener1 = () => {};
-  const listener2 = () => {};
+  const listener1 = () => {
+  };
+  const listener2 = () => {
+  };
 
   tasklets.on('count-event', listener1);
   tasklets.on('count-event', listener2);
@@ -474,7 +495,7 @@ describe('System Management Tests', () => {
   const workerConfigs = [1, 2, 4, 8];
 
   workerConfigs.forEach(workers => {
-  tasklets.config({ workers });
+  tasklets.config({workers});
 
   const stats = tasklets.getStats();
   expect(stats.workers).toBe(workers);
@@ -487,7 +508,7 @@ describe('System Management Tests', () => {
 
   test('should handle resource cleanup', async () => {
   // Run tasks and check resource usage
-  await tasklets.runAll(Array.from({ length: 10 }, (_, i) => () => `cleanup-${i}`));
+  await tasklets.runAll(Array.from({length: 10}, (_, i) => () => `cleanup-${i}`));
 
   const preShutdownHealth = tasklets.getHealth();
   expect(preShutdownHealth.status).toBe('healthy');
@@ -512,7 +533,7 @@ describe('System Management Tests', () => {
   } else if (i % 4 === 2) {
   concurrentOperations.push(Promise.resolve(tasklets.getHealth()));
   } else {
-  concurrentOperations.push(Promise.resolve(tasklets.config({ workers: 2 + (i % 4) })));
+  concurrentOperations.push(Promise.resolve(tasklets.config({workers: 2 + (i % 4)})));
   }
   }
 
@@ -581,9 +602,9 @@ describe('System Management Tests', () => {
 
   // Multiple concurrent shutdown calls
   const shutdownPromises = [
-  tasklets.shutdown({ timeout: 1000 }),
-  tasklets.shutdown({ timeout: 2000 }),
-  tasklets.shutdown({ timeout: 3000 })
+  tasklets.shutdown({timeout: 1000}),
+  tasklets.shutdown({timeout: 2000}),
+  tasklets.shutdown({timeout: 3000})
   ];
 
   // All should complete without errors
@@ -636,7 +657,7 @@ describe('System Management Tests', () => {
   const systemCpus = require('os').cpus().length;
 
   // Test with more workers than CPUs
-  tasklets.config({ workers: systemCpus * 2 });
+  tasklets.config({workers: systemCpus * 2});
 
   const result = await tasklets.run(() => 'oversubscribed');
   expect(typeof result).toBe('string');
@@ -657,7 +678,7 @@ describe('System Management Tests', () => {
   process.env.NODE_ENV = env;
 
   // Configuration should work in any environment
-  expect(() => tasklets.config({ workers: 2 })).not.toThrow();
+  expect(() => tasklets.config({workers: 2})).not.toThrow();
 
   const stats = tasklets.getStats();
   expect(stats).toBeDefined();
@@ -670,7 +691,7 @@ describe('System Management Tests', () => {
 
   test('should handle graceful degradation', async () => {
   // Test with minimal resources
-  tasklets.config({ workers: 1, timeout: 1000 });
+  tasklets.config({workers: 1, timeout: 1000});
 
   const result = await tasklets.run(() => 'minimal');
   expect(typeof result).toBe('string');

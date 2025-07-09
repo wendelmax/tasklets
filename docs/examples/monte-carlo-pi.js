@@ -1,4 +1,14 @@
-const tasklets = require('tasklets');
+/**
+ * @file monte-carlo-pi.js
+ * @description This example demonstrates the use of Tasklets to estimate the value of Pi using the Monte Carlo method.
+ * It showcases several aspects of parallel computing:
+ * - Parallel Pi Estimation: The main estimation is parallelized across multiple workers to speed up the computation.
+ * - Convergence Analysis: It analyzes how the accuracy of the estimation improves as the number of iterations increases.
+ * - Scalability Test: It tests how the performance scales with an increasing number of worker threads.
+ * - Precision Comparison: It compares the standard Monte Carlo method with other sampling techniques like Stratified and Antithetic sampling.
+ * This example is a classic demonstration of a CPU-bound, "embarrassingly parallel" problem.
+ */
+const tasklets = require('../../lib/tasklets');
 
 console.log('Tasklets - Monte Carlo Pi Estimation Example\n');
 
@@ -32,7 +42,8 @@ function estimatePiWithSampling(iterations, samples = 1000) {
   if (i % samples === 0) {
   // Quick yield simulation
   const start = Date.now();
-  while (Date.now() - start < 0.1) {} // 0.1ms
+  while (Date.now() - start < 0.1) {
+  } // 0.1ms
   }
   }
 
@@ -48,7 +59,7 @@ async function parallelPiEstimation() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  Array.from({ length: numWorkers }, (_, i) => () => estimatePi(iterationsPerWorker))
+  Array.from({length: numWorkers}, (_, i) => () => estimatePi(iterationsPerWorker))
   );
 
   const averageEstimate = results.reduce((sum, est) => sum + est, 0) / results.length;
@@ -66,7 +77,7 @@ async function parallelPiEstimation() {
   console.log(`  Worker ${index + 1}: ${estimate.toFixed(10)} (error: ${Math.abs(estimate - Math.PI).toFixed(10)})`);
   });
 
-  return { averageEstimate, estimates: results, time: endTime - startTime };
+  return {averageEstimate, estimates: results, time: endTime - startTime};
 }
 
 async function convergenceAnalysis() {
@@ -83,9 +94,9 @@ async function convergenceAnalysis() {
   const startTime = Date.now();
 
   const estimates = await Promise.all(
-  Array.from({ length: workers }, () => 
+  Array.from({length: workers}, () =>
   tasklets.runAll(
-  Array.from({ length: workers }, () => () => estimatePi(iterationsPerWorker))
+  Array.from({length: workers}, () => () => estimatePi(iterationsPerWorker))
   )
   );
 
@@ -130,7 +141,7 @@ async function scalabilityTest() {
   const startTime = Date.now();
 
   const estimates = await tasklets.runAll(
-  Array.from({ length: numWorkers }, () => () => estimatePi(iterationsPerWorker))
+  Array.from({length: numWorkers}, () => () => estimatePi(iterationsPerWorker))
   );
 
   const averageEstimate = estimates.reduce((sum, est) => sum + est, 0) / estimates.length;

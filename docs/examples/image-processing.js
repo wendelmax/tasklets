@@ -1,3 +1,13 @@
+/**
+ * @file image-processing.js
+ * @description This example simulates a parallel image processing pipeline using Tasklets.
+ * It demonstrates how to handle a variety of image processing tasks concurrently:
+ * - Batch processing of images to generate different variants (e.g., resizing, thumbnails).
+ * - Applying a set of filters to multiple images in parallel.
+ * - Performing image analysis, such as color analysis, face detection, and object detection, in parallel.
+ * The processing functions are simulations and do not require any external image processing libraries or actual image files.
+ * This is a good example of how to manage a pipeline of CPU-bound tasks.
+ */
 const tasklets = require('../../lib/tasklets');
 const fs = require('fs');
 const path = require('path');
@@ -6,7 +16,7 @@ console.log('Tasklets - Image Processing Example\n');
 
 // Simulated image processing function
 function processImage(imagePath, options) {
-  const { width, height, quality, operation } = options;
+  const {width, height, quality, operation} = options;
 
   const startTime = Date.now();
 
@@ -27,7 +37,7 @@ function processImage(imagePath, options) {
   originalPath: imagePath,
   processedPath: `processed_${width}x${height}_q${quality}_${operation}_${path.basename(imagePath)}`,
   operation,
-  dimensions: { width, height },
+  dimensions: {width, height},
   quality,
   originalSize,
   processedSize: newSize,
@@ -64,17 +74,17 @@ async function batchProcessImages() {
   ];
 
   const processingOptions = [
-  { width: 800, height: 600, quality: 80, operation: 'resize' },
-  { width: 400, height: 300, quality: 70, operation: 'resize' },
-  { width: 200, height: 150, quality: 60, operation: 'thumbnail' },
-  { width: 1920, height: 1080, quality: 90, operation: 'hd_resize' }
+  {width: 800, height: 600, quality: 80, operation: 'resize'},
+  {width: 400, height: 300, quality: 70, operation: 'resize'},
+  {width: 200, height: 150, quality: 60, operation: 'thumbnail'},
+  {width: 1920, height: 1080, quality: 90, operation: 'hd_resize'}
   ];
 
   const tasks = [];
 
   for (const image of images) {
   for (const options of processingOptions) {
-  tasks.push({ image, options });
+  tasks.push({image, options});
   }
   }
 
@@ -82,7 +92,7 @@ async function batchProcessImages() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  tasks.map(({ image, options }) => 
+  tasks.map(({image, options}) =>
   () => processImage(image, options)
   )
   );
@@ -118,7 +128,7 @@ async function applyFiltersInParallel() {
 
   for (const image of images) {
   for (const filter of filters) {
-  filterTasks.push({ image, filter });
+  filterTasks.push({image, filter});
   }
   }
 
@@ -126,7 +136,7 @@ async function applyFiltersInParallel() {
   const startTime = Date.now();
 
   const results = await tasklets.runAll(
-  filterTasks.map(({ image, filter }) => 
+  filterTasks.map(({image, filter}) =>
   () => applyFilter(image, filter)
   )
   );
@@ -160,7 +170,7 @@ async function applyFiltersInParallel() {
 }
 
 async function imageAnalysis() {
-  const images = Array.from({ length: 20 }, (_, i) => `analysis_image_${i + 1}.jpg`);
+  const images = Array.from({length: 20}, (_, i) => `analysis_image_${i + 1}.jpg`);
 
   console.log(`\nAnalyzing ${images.length} images in parallel...`);
 
@@ -203,7 +213,7 @@ async function imageAnalysis() {
   }
 
   const faceCount = Math.floor(Math.random() * 4); // 0-3 faces
-  const faces = Array.from({ length: faceCount }, (_, i) => ({
+  const faces = Array.from({length: faceCount}, (_, i) => ({
   id: i + 1,
   confidence: Math.random() * 0.3 + 0.7, // 70-100% confidence
   bounds: {

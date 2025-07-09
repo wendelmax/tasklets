@@ -2,558 +2,394 @@
 
 ## Overview
 
-**Tasklets 1.0.0** introduces a revolutionary **Promise-based API** that's **80% simpler** to use while maintaining exceptional performance. This modern API eliminates complex ID management and error checking, providing a clean and intuitive interface for high-performance parallel processing.
-
-## Installation
-
-```bash
-npm install tasklets
-```
-
-## Quick Start
-
-```javascript
-const tasklets = require('tasklets');
-
-// Modern API - one line execution
-const result = await tasklets.run(() => {
-  return fibonacci(40);
-});
-```
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Basic Usage](#basic-usage)
-- [Configuration](#configuration)
-- [Core API](#core-api)
-  - [tasklets.run()](#taskletsrun)
-  - [tasklets.runAll()](#taskletsrunall)
-  - [tasklets.batch()](#taskletsbatch)
-  - [tasklets.retry()](#taskletsretry)
-  - [tasklets.config()](#taskletsconfig)
-  - [tasklets.getStats()](#taskletsgetstats)
-  - [tasklets.getHealth()](#taskletsgethealth)
-  - [tasklets.shutdown()](#taskletsshutdown)
-- [Error Handling](#error-handling)
-- [Performance Tips](#performance-tips)
-- [Examples](#examples)
-
----
+Tasklets provides a unified, intelligent API for parallel task execution that automatically optimizes for single tasks, arrays of tasks, or large batches. The system includes advanced auto-configuration, auto-scheduling, multiprocessing, and comprehensive monitoring capabilities.
 
 ## Core API
 
-### tasklets.run(fn, options?)
+### `run(taskFunction, options?)`
 
-Execute a single task with automatic Promise handling.
+Execute a single task and wait for completion.
 
-**Parameters:**
-- `fn: Function` - Function to execute in parallel
-- `options: Object` (optional) - Task options
-
-**Options:**
-- `timeout: number` - Timeout in milliseconds (overrides global timeout)
-
-**Returns:** `Promise<T>` - Promise that resolves with the task result
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-// Basic usage
 const result = await tasklets.run(() => {
-  let sum = 0;
-  for (let i = 0; i < 1000000; i++) {
-  sum += i;
-  }
-  return sum;
+  return 'Hello from task!';
 });
-
-// With custom timeout
-const result = await tasklets.run(() => {
-  return slowOperation();
-}, { timeout: 5000 });
 ```
 
-### tasklets.runAll(tasks, options?)
+**Returns:** The result of the task function directly.
+
+### `runAll(tasks, options?)`
 
 Execute multiple tasks in parallel.
 
-**Parameters:**
-- `tasks: Function[]` - Array of functions to execute
-- `options: Object` (optional) - Task options applied to all tasks
-
-**Returns:** `Promise<T[]>` - Promise that resolves with array of results
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-// Run multiple tasks in parallel
 const results = await tasklets.runAll([
-  () => fibonacci(35),
-  () => fibonacci(36),
-  () => fibonacci(37)
+  () => 'Task 1 completed',
+  () => 'Task 2 completed',
+  () => 'Task 3 completed'
 ]);
-
-console.log('Results:', results); // [9227465, 14930352, 24157817]
-
-// With custom timeout for all tasks
-const results = await tasklets.runAll([
-  () => fastTask(),
-  () => mediumTask(),
-  () => slowTask()
-], { timeout: 10000 });
 ```
 
----
+**Returns:** Array of results from all tasks.
 
-## Configuration
+### `batch(taskConfigs, options?)`
 
-### tasklets.config(options)
+Execute tasks in batch with progress tracking.
 
-Configure tasklets behavior globally.
-
-**Parameters:**
-- `options: Object` - Configuration options
-
-**Options:**
-- `workers: number | 'auto'` - Number of worker threads or 'auto' for CPU core detection
-- `timeout: number` - Default timeout in milliseconds (default: 30000)
-- `logging: string` - Log level: 'off', 'error', 'warn', 'info', 'debug', 'trace'
-- `maxMemory: string` - Maximum memory usage (future feature)
-
-**Returns:** `Tasklets` - The tasklets instance for chaining
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
+const results = await tasklets.batch([
+  { name: 'task1', task: () => 'Result 1' },
+  { name: 'task2', task: () => 'Result 2' },
+  { name: 'task3', task: () => 'Result 3' }
+], {
+  progress: (completed, total, name) => {
+    console.log(`Progress: ${completed}/${total} - ${name}`);
+  }
+});
+```
 
-// Basic configuration
-tasklets.config({
-  workers: 'auto',
-  timeout: 15000,
+**Returns:** Array of results with task names.
+
+### `getStats()`
+
+Get basic system statistics.
+
+```javascript
+const stats = tasklets.getStats();
+```
+
+**Returns:** Object with basic performance statistics.
+
+### `getHealth()`
+
+Get system health information.
+
+```javascript
+const health = tasklets.getHealth();
+```
+
+**Returns:** Object with system health status.
+
+### `getDetailedStats()`
+
+Get comprehensive system statistics.
+
+```javascript
+const stats = tasklets.getDetailedStats();
+```
+
+**Returns:** Object with detailed performance metrics.
+
+## Configuration APIs
+
+### `configure(options)`
+
+Configure tasklets with various options.
+
+```javascript
+tasklets.configure({
+  workers: 4,
+  timeout: 30000,
   logging: 'info'
 });
+```
 
-// Chaining configuration
-tasklets
-  .config({ workers: 8 })
-  .config({ logging: 'debug' })
-  .config({ timeout: 20000 });
+### `config(options)`
 
-// Production configuration
+Alias for configure method.
+
+```javascript
 tasklets.config({
-  workers: require('os').cpus().length,
-  timeout: 30000,
-  logging: 'error'
+  workers: 'auto',
+  timeout: 10000
 });
 ```
 
----
+### `setWorkerThreadCount(count)`
 
-## Batch Processing
+Set the number of worker threads.
 
-### tasklets.batch(taskConfigs, options?)
-
-Execute tasks in batches with progress tracking and error handling.
-
-**Parameters:**
-- `taskConfigs: BatchTaskConfig[]` - Array of task configurations
-- `options: BatchOptions` (optional) - Batch options
-
-**BatchTaskConfig:**
-- `name: string` (optional) - Task name for identification
-- `task: Function` - Task function to execute
-- `options: Object` (optional) - Task-specific options
-
-**BatchOptions:**
-- `onProgress: Function` (optional) - Progress callback
-
-**Returns:** `Promise<BatchResult[]>` - Promise that resolves with batch results
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-// Basic batch processing
-const results = await tasklets.batch([
-  { name: 'task-1', task: () => processData(1) },
-  { name: 'task-2', task: () => processData(2) },
-  { name: 'task-3', task: () => processData(3) }
-]);
-
-// With progress tracking
-const results = await tasklets.batch(largeTasks, {
-  onProgress: (progress) => {
-  console.log(`Progress: ${progress.percentage}% (${progress.completed}/${progress.total})`);
-  }
-});
-
-// Handle mixed success/failure results
-results.forEach(result => {
-  if (result.success) {
-  console.log(`${result.name}: ${result.result}`);
-  } else {
-  console.error(`${result.name} failed: ${result.error}`);
-  }
-});
+tasklets.setWorkerThreadCount(8);
 ```
 
----
+### `getWorkerThreadCount()`
 
-## Retry Operations
+Get the current number of worker threads.
 
-### tasklets.retry(fn, options?)
-
-Retry a task with exponential backoff.
-
-**Parameters:**
-- `fn: Function` - Function to retry
-- `options: RetryOptions` (optional) - Retry options
-
-**RetryOptions:**
-- `attempts: number` - Maximum number of attempts (default: 3)
-- `delay: number` - Initial delay in milliseconds (default: 1000)
-- `backoff: number` - Backoff multiplier (default: 2)
-- `timeout: number` - Timeout per attempt
-
-**Returns:** `Promise<T>` - Promise that resolves with the successful result
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-// Basic retry
-const data = await tasklets.retry(() => {
-  if (Math.random() < 0.7) {
-  throw new Error('Random failure');
-  }
-  return 'Success!';
-});
-
-// Advanced retry configuration
-const apiData = await tasklets.retry(async () => {
-  const response = await fetch('/api/data');
-  if (!response.ok) {
-  throw new Error(`HTTP ${response.status}`);
-  }
-  return response.json();
-}, {
-  attempts: 5,
-  delay: 1000,
-  backoff: 2,
-  timeout: 5000
-});
+const count = tasklets.getWorkerThreadCount();
 ```
 
----
+### `setLogLevel(level)`
 
-## Monitoring and Health
+Set the logging level.
 
-### tasklets.getStats()
-
-Get comprehensive performance statistics.
-
-**Returns:** `TaskletStats` - Performance statistics object
-
-**TaskletStats:**
-- `workers: number` - Number of worker threads
-- `tasks: Object` - Task execution statistics
-  - `completed: number` - Number of completed tasks
-  - `active: number` - Number of currently active tasks
-  - `queued: number` - Number of queued tasks
-  - `total: number` - Total number of tasks processed
-- `performance: Object` - Performance metrics
-  - `throughput: number` - Tasks per second
-  - `averageExecutionTime: number` - Average execution time
-- `system: Object` - System information
-  - `cpuCores: number` - Number of CPU cores
-  - `memoryUsage: Object` - Node.js memory usage
-  - `uptime: number` - Process uptime
-- `config: Object` - Current configuration
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-const stats = tasklets.getStats();
-console.log('Performance Stats:', {
-  workers: stats.workers,
-  completedTasks: stats.tasks.completed,
-  throughput: stats.performance.throughput,
-  memoryUsage: Math.round(stats.system.memoryUsage.heapUsed / 1024 / 1024) + 'MB'
-});
+tasklets.setLogLevel('info');
 ```
 
-### tasklets.getHealth()
+### `getLogLevel()`
 
-Get system health status.
+Get the current logging level.
 
-**Returns:** `TaskletHealth` - Health information object
-
-**TaskletHealth:**
-- `status: string` - 'healthy' or 'unhealthy'
-- `workers: Object` - Worker information
-  - `count: number` - Number of workers
-  - `utilization: number` - Worker utilization percentage
-- `memory: Object` - Memory information
-  - `used: number` - Used memory in MB
-  - `total: number` - Total memory in MB
-  - `percentage: number` - Memory usage percentage
-- `tasks: Object` - Task information
-  - `completed: number` - Completed tasks
-  - `active: number` - Active tasks
-  - `queued: number` - Queued tasks
-- `error?: string` - Error message if unhealthy
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-const health = tasklets.getHealth();
-console.log('System Health:', health.status);
-
-if (health.status === 'unhealthy') {
-  console.error('Health issue:', health.error);
-}
-
-// Monitor worker utilization
-if (health.workers.utilization > 0.9) {
-  console.warn('High worker utilization:', health.workers.utilization);
+const level = tasklets.getLogLevel();
+```
+  recommendedTimeoutMs: 30000,
+  shouldAdjustTimeout: false,
+  timeoutConfidence: 0.78,
+  recommendedPriority: 0,
+  shouldAdjustPriority: false,
+  priorityConfidence: 0.65,
+  recommendedBatchSize: 1000,
+  shouldBatch: true,
+  batchingConfidence: 0.95,
+  shouldRebalance: false,
+  loadBalanceConfidence: 0.88
 }
 ```
 
-### tasklets.shutdown(options?)
+### `forceOptimization()`
 
-Gracefully shutdown the tasklets system.
+Force immediate analysis and optimization of the system.
 
-**Parameters:**
-- `options: ShutdownOptions` (optional) - Shutdown options
-
-**ShutdownOptions:**
-- `timeout: number` - Timeout to wait for tasks to complete (default: 10000)
-
-**Returns:** `Promise<void>` - Promise that resolves when shutdown is complete
-
-**Example:**
 ```javascript
-const tasklets = require('tasklets');
-
-// Graceful shutdown
-await tasklets.shutdown();
-
-// Shutdown with custom timeout
-await tasklets.shutdown({ timeout: 5000 });
-
-// Production shutdown handler
-process.on('SIGTERM', async () => {
-  console.log('Shutting down gracefully...');
-  try {
-  await tasklets.shutdown({ timeout: 10000 });
-  console.log('Shutdown completed');
-  process.exit(0);
-  } catch (error) {
-  console.error('Shutdown failed:', error);
-  process.exit(1);
-  }
-});
+const result = await tasklets.forceOptimization();
 ```
 
----
+**Returns:**
+```javascript
+{
+  success: true,
+  message: "Optimization analysis completed",
+  timestamp: 1703123456789
+}
+```
 
-## TypeScript Support
+## Monitoring and Analytics APIs
 
-Full TypeScript support with intelligent type inference:
+### `getPerformanceMetrics()`
 
-```typescript
-import tasklets, { TaskletConfig, TaskletStats, BatchTaskConfig } from 'tasklets';
+Get historical performance metrics for analysis and trending.
 
-// Type-safe configuration
-const config: TaskletConfig = {
-  workers: 8,
-  timeout: 5000,
-  logging: 'debug'
-};
-tasklets.config(config);
+```javascript
+const metrics = await tasklets.getPerformanceMetrics();
+```
 
-// Type-safe task execution
-const result: number = await tasklets.run((): number => {
-  return Math.random() * 100;
-});
-
-// Type-safe parallel processing
-const results: string[] = await tasklets.runAll([
-  (): string => 'task1',
-  (): string => 'task2'
-]);
-
-// Type-safe batch processing
-const batchTasks: BatchTaskConfig[] = [
+**Returns:**
+```javascript
+{
+  autoConfig: [
   {
-  name: 'task-1',
-  task: (): number => processData(1)
+  timestamp: 1703123456789,
+  cpuUtilization: 45.2,
+  memoryUsagePercent: 12.5,
+  workerCount: 8,
+  activeJobs: 5,
+  completedJobs: 1500,
+  failedJobs: 3,
+  workerUtilization: 0.625,
+  averageExecutionTimeMs: 15.2
   }
-];
-
-// Type-safe statistics
-const stats: TaskletStats = tasklets.getStats();
-console.log(`Throughput: ${stats.performance.throughput}`);
-```
-
----
-
-## Migration Guide
-
-### From 0.x to 1.0.0
-
-| Old API (0.x) | New API (1.0.0) | Notes |
-|---------------|-----------------|-------|
-| `spawn()` + `join()` + `getResult()` | `run()` | Promise-based |
-| `spawnMany()` + `joinMany()` | `runAll()` | Array of functions |
-| `spawnAsync()` | `run()` | Same signature |
-| `hasError()` + `getError()` | `try/catch` | Standard Promise errors |
-| `setWorkerThreadCount()` | `config({ workers })` | Centralized config |
-| `getStats()` | `getStats()` | Enhanced object |
-
-### Migration Examples
-
-```javascript
-//  Old API (0.x)
-const taskId = tasklets.spawn(() => work());
-tasklets.join(taskId);
-if (tasklets.hasError(taskId)) {
-  throw new Error(tasklets.getError(taskId));
+  // ... more historical data
+  ],
+  autoScheduler: [
+  {
+  timestamp: 1703123456789,
+  cpuUtilization: 45.2,
+  memoryUsagePercent: 12.5,
+  workerCount: 8,
+  activeJobs: 5,
+  completedJobs: 1500,
+  failedJobs: 3,
+  workerUtilization: 0.625,
+  averageExecutionTimeMs: 15.2
+  }
+  // ... more historical data
+  ]
 }
-const result = tasklets.getResult(taskId);
-
-//  New API (1.0.0)
-const result = await tasklets.run(() => work());
 ```
+
+### `getWorkloadPattern()`
+
+Get detected workload pattern for understanding system behavior.
 
 ```javascript
-//  Old API (0.x)
-const ids = tasklets.spawnMany(3, (index) => work(index));
-tasklets.joinMany(ids);
-const results = ids.map(id => tasklets.getResult(id));
-
-//  New API (1.0.0)
-const results = await tasklets.runAll([
-  () => work(0),
-  () => work(1),
-  () => work(2)
-]);
+const pattern = await tasklets.getWorkloadPattern();
 ```
 
----
+**Returns:**
+```javascript
+{
+  pattern: "CPU_INTENSIVE", // CPU_INTENSIVE, IO_INTENSIVE, MEMORY_INTENSIVE, MIXED
+  description: "CPU-intensive workload detected",
+  timestamp: 1703123456789
+}
+```
+
+### `getMultiprocessorStats()`
+
+Get detailed multiprocessor statistics and performance metrics.
+
+```javascript
+const stats = await tasklets.getMultiprocessorStats();
+```
+
+**Returns:**
+```javascript
+{
+  enabled: true,
+  optimalThreadCount: 8,
+  processCount: 8,
+  totalOperations: 5000,
+  successfulOperations: 4980,
+  failedOperations: 20,
+  averageProcessingTimeMs: 15.2,
+  totalProcessingTimeMs: 76000,
+  operationsPerSecond: 65.8
+}
+```
+
+## Advanced APIs (C++ Direct Access)
+
+For maximum performance, you can use the C++ APIs directly:
+
+### `spawn(task)`
+Spawn a single task without waiting.
+
+```javascript
+const taskId = tasklets.spawn(() => {
+  return 'Task result';
+});
+```
+
+### `join(taskId)`
+Wait for a specific task to complete.
+
+```javascript
+tasklets.join(taskId);
+```
+
+### `getResult(taskId)`
+Get the result of a completed task.
+
+```javascript
+const result = tasklets.getResult(taskId);
+```
+
+### `getError(taskId)`
+Get the error of a failed task.
+
+```javascript
+const error = tasklets.getError(taskId);
+```
+
+### `batch(count, task)`
+Create a batch of tasks.
+
+```javascript
+const taskIds = tasklets.batch(1000, (index) => {
+  return `Task ${index} result`;
+});
+```
+
+### `joinBatch(taskIds)`
+Wait for all tasks in a batch to complete.
+
+```javascript
+tasklets.joinBatch(taskIds);
+```
+
+### `batchFinished(taskIds)`
+Check if all tasks in a batch are completed.
+
+```javascript
+const finished = tasklets.batchFinished(taskIds);
+```
+
+## Error Handling
+
+All APIs provide comprehensive error handling:
+
+```javascript
+try {
+  const result = await tasklets.run(() => {
+  throw new Error('Task failed');
+  });
+} catch (error) {
+  console.error('Task execution failed:', error.message);
+}
+```
+
+For batch operations with mixed results:
+
+```javascript
+const batchResult = await tasklets.run([
+  () => 'Success',
+  () => { throw new Error('Failed'); },
+  () => 'Another success'
+]);
+
+console.log('Successful tasks:', batchResult.successfulTasks);
+console.log('Failed tasks:', batchResult.failedTasks);
+console.log('Errors:', batchResult.errors);
+```
+
+## Performance Considerations
+
+- **Single tasks**: Use `run(task)` for individual tasks
+- **Small batches (2-10 tasks)**: Use `run([task1, task2, ...])` for arrays
+- **Large batches (100+ tasks)**: Use `run(count, task)` for optimal performance
+- **Maximum performance**: Use C++ APIs directly (`spawn`, `join`, etc.)
+- **Auto-optimization**: The system automatically optimizes based on workload patterns
+- **Monitoring**: Use `getPerformanceMetrics()` to track system performance over time
+
+## Automatic Optimization
+
+The unified `run` API automatically:
+
+1. **Detects execution type** based on input parameters
+2. **Optimizes thread pool usage** for the detected pattern
+3. **Applies batch optimizations** when multiple tasks are detected
+4. **Records patterns** for future automatic configuration
+5. **Provides consistent result format** regardless of execution type
+6. **Analyzes workload patterns** for intelligent optimization
+7. **Generates recommendations** for system tuning
+8. **Monitors performance** continuously for adaptive behavior
 
 ## Examples
 
-### Basic Parallel Processing
+See the [examples directory](../examples/) for comprehensive usage examples:
 
-```javascript
-const tasklets = require('tasklets');
+- [Basic usage](../examples/basic.js)
+- [Batch processing](../examples/data-processing.js)
+- [Error handling](../examples/error-handling.js)
+- [Performance monitoring](../examples/performance-monitoring.js)
+- [Advanced APIs](../examples/user-friendly-apis.js) 
 
-async function processDataParallel() {
-  const datasets = ['data1.csv', 'data2.csv', 'data3.csv'];
+## Shutdown Behavior
 
-  const results = await tasklets.runAll(
-  datasets.map(file => () => processFile(file))
-  );
+- The `shutdown` method is idempotent: multiple calls after the first will resolve immediately and emit the `shutdown` event for all calls.
+- The `shutdown` event is always emitted, even for repeated calls.
+- If a shutdown is already in progress, new calls will not wait for the timeout and will resolve immediately.
 
-  return results;
-}
-```
+## Cleanup Timing
 
-### CPU-Intensive Computation
+- Automatic cleanup of completed tasklets may be delayed depending on system load and environment.
+- In test or CI environments, cleanup may require a manual call to `force_cleanup()` for deterministic results.
 
-```javascript
-const tasklets = require('tasklets');
+## Batch Progress Callbacks
 
-function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
+- The number of progress callbacks in `batch` operations may vary depending on parallel execution and system scheduling. Do not assume a fixed number of callbacks.
 
-async function computeFibonacci() {
-  const numbers = [35, 36, 37, 38, 39];
+## Memory Management Tolerances
 
-  const results = await tasklets.runAll(
-  numbers.map(n => () => fibonacci(n))
-  );
+- Memory and tasklet counters may have small residual values due to native delays. Tests and monitoring should allow for minor discrepancies.
 
-  console.log('Fibonacci results:', results);
-}
-```
+## Known Limitations
 
-### Batch Processing with Progress
-
-```javascript
-const tasklets = require('tasklets');
-
-async function processBatchWithProgress() {
-  const tasks = Array.from({ length: 100 }, (_, i) => ({
-  name: `task-${i}`,
-  task: () => processItem(i)
-  }));
-
-  const results = await tasklets.batch(tasks, {
-  onProgress: (progress) => {
-  process.stdout.write(`\rProgress: ${progress.percentage}%`);
-  }
-  });
-
-  console.log('\nCompleted!', results.length, 'tasks processed');
-}
-```
-
-### Error Handling
-
-```javascript
-const tasklets = require('tasklets');
-
-async function handleErrors() {
-  try {
-  const result = await tasklets.run(() => {
-  if (Math.random() < 0.5) {
-  throw new Error('Random failure');
-  }
-  return 'Success';
-  });
-  console.log('Result:', result);
-  } catch (error) {
-  console.error('Task failed:', error.message);
-  }
-}
-```
-
-### Production Configuration
-
-```javascript
-const tasklets = require('tasklets');
-
-// Production setup
-tasklets.config({
-  workers: 'auto',
-  timeout: 30000,
-  logging: 'error'
-});
-
-// Health monitoring
-setInterval(() => {
-  const health = tasklets.getHealth();
-  if (health.status === 'unhealthy') {
-  console.error('System unhealthy:', health.error);
-  }
-}, 30000);
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  await tasklets.shutdown({ timeout: 10000 });
-  process.exit(0);
-});
-```
-
----
-
-For more examples, see the [Examples Guide](examples.md) and [Getting Started](getting-started.md). 
+- Automatic cleanup timing is not guaranteed; use `force_cleanup()` if immediate cleanup is required.
+- Progress callback frequency in batch operations is not strictly deterministic.
+- Native memory management may cause small delays in releasing resources.
+- Some advanced configuration and monitoring features are partially implemented or depend on native module updates. 
