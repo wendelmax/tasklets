@@ -464,10 +464,20 @@ handler.handleGet = async function (path, query) {
 };
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('\nShutting down server...');
+  
+  // Set up shutdown event listener
+  tasklets.on('shutdown', () => {
+    console.log('Tasklets shutdown event received');
+  });
+  
   const finalStats = tasklets.getStats();
   console.log(`Final stats: ${finalStats.totalFibers} total fibers, ${finalStats.activeFibers} active`);
+  
+  // Use proper shutdown method (idempotent)
+  await tasklets.shutdown({ timeout: 2000 });
+  
   server.close(() => {
   console.log('Server stopped');
   process.exit(0);

@@ -4,7 +4,7 @@
  * that make tasklets incredibly easy to use with automatic optimization.
  */
 
-const tasklets = require('../lib/index');
+const tasklets = require('../../lib/index');
 
 console.log('🚀 Tasklets 1.0.0 - User-Friendly Automation Example\n');
 

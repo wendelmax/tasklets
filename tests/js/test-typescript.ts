@@ -21,7 +21,7 @@ import tasklets, {
   ShutdownOptions,
   BatchProgress,
   BatchResult
-} from './lib/index';
+} from '../../lib/index';
 
 // Test basic imports and types
 console.log('✅ TypeScript imports working correctly');

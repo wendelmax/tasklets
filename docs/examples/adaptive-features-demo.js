@@ -3,7 +3,7 @@
  * @description Demonstrates the comprehensive adaptive features in the Tasklets lib
  */
 
-const tasklets = require('../lib/index');
+const tasklets = require('../../lib/index');
 const os = require('os');
 
 console.log('=== Tasklets Adaptive Features Demo ===\n');

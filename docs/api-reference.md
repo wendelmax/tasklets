@@ -367,3 +367,29 @@ See the [examples directory](../examples/) for comprehensive usage examples:
 - [Error handling](../examples/error-handling.js)
 - [Performance monitoring](../examples/performance-monitoring.js)
 - [Advanced APIs](../examples/user-friendly-apis.js) 
+
+## Shutdown Behavior
+
+- The `shutdown` method is idempotent: multiple calls after the first will resolve immediately and emit the `shutdown` event for all calls.
+- The `shutdown` event is always emitted, even for repeated calls.
+- If a shutdown is already in progress, new calls will not wait for the timeout and will resolve immediately.
+
+## Cleanup Timing
+
+- Automatic cleanup of completed tasklets may be delayed depending on system load and environment.
+- In test or CI environments, cleanup may require a manual call to `force_cleanup()` for deterministic results.
+
+## Batch Progress Callbacks
+
+- The number of progress callbacks in `batch` operations may vary depending on parallel execution and system scheduling. Do not assume a fixed number of callbacks.
+
+## Memory Management Tolerances
+
+- Memory and tasklet counters may have small residual values due to native delays. Tests and monitoring should allow for minor discrepancies.
+
+## Known Limitations
+
+- Automatic cleanup timing is not guaranteed; use `force_cleanup()` if immediate cleanup is required.
+- Progress callback frequency in batch operations is not strictly deterministic.
+- Native memory management may cause small delays in releasing resources.
+- Some advanced configuration and monitoring features are partially implemented or depend on native module updates. 

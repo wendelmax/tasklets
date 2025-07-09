@@ -10,6 +10,7 @@ This document provides practical examples of using the **Tasklets 1.0.0** modern
 - [I/O-Bound Tasks](#io-bound-tasks)
 - [Real-world Applications](#real-world-applications)
 - [Advanced Patterns](#advanced-patterns)
+- [Best Practices](#best-practices)
 
 ---
 
@@ -159,6 +160,15 @@ This example showcases the built-in performance monitoring capabilities of Taskl
 **File:** [`visual-context-switching.js`](examples/visual-context-switching.js)
 
 This example provides a visual demonstration of context switching between tasks running in Tasklets. It shows how tasks are executed concurrently and how the event loop is not blocked, allowing for responsive applications even during heavy computation. It includes a visual representation of task progress and main thread activity.
+
+---
+
+## Best Practices
+
+### Memory Management and Cleanup
+**File:** [`memory-management.js`](examples/memory-management.js)
+
+This example demonstrates proper memory management, cleanup, and shutdown practices when using Tasklets. It covers: monitoring memory usage during task execution, understanding automatic vs manual cleanup timing, using `forceCleanup()` for immediate results (especially important in test environments), batch processing with memory awareness, stress testing memory limits, proper shutdown handling with event listeners, and understanding the idempotent nature of shutdown calls. The example also shows how to handle small residual values in memory counters and variable progress callback frequencies, which are normal behaviors of the system.
 
 ---
 

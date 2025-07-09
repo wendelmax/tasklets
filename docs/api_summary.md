@@ -186,6 +186,15 @@ console.log('Worker utilization:', tasklets.getWorkerUtilization());
 - Statistics combine native module data with Node.js system information
 - Logging system provides both configuration and direct logging capabilities
 
+## Additional Notes
+
+- The `shutdown` method is idempotent: multiple calls after the first resolve immediately and emit the `shutdown` event for all calls.
+- The `shutdown` event is always emitted, even for repeated calls.
+- Automatic cleanup of completed tasklets may be delayed; use `force_cleanup()` for immediate cleanup, especially in tests.
+- The number of progress callbacks in `batch` operations may vary depending on parallelism and scheduling.
+- Memory and tasklet counters may have small residual values due to native delays; allow for minor discrepancies in tests and monitoring.
+- Some advanced features are partially implemented or depend on native module updates.
+
 ##  Performance Features
 
 - **Adaptive Configuration**: Automatically adjusts settings based on system capabilities

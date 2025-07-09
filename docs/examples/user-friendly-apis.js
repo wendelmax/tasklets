@@ -83,6 +83,47 @@ async function demonstrateAdvancedAPIs() {
   console.log('  Retry Result:', retryResult);
   console.log();
 
+  // 7. Memory Management and Cleanup
+  console.log('7. Memory Management and Cleanup:');
+  
+  // Run some tasks to demonstrate cleanup
+  const cleanupTasks = Array.from({ length: 20 }, (_, i) => () => `Task ${i}`);
+  await tasklets.runAll(cleanupTasks);
+  
+  // Show memory stats before cleanup
+  const statsBefore = tasklets.getMemoryStats();
+  console.log('  Active tasklets before cleanup:', statsBefore.activeTasklets);
+  
+  // Force cleanup for immediate results (especially useful in tests)
+  tasklets.forceCleanup();
+  
+  // Show memory stats after cleanup
+  const statsAfter = tasklets.getMemoryStats();
+  console.log('  Active tasklets after cleanup:', statsAfter.activeTasklets);
+  console.log('  Note: Small residual values are normal due to native delays');
+  console.log();
+
+  // 8. Shutdown Behavior (Idempotent)
+  console.log('8. Shutdown Behavior:');
+  
+  // Set up shutdown event listener
+  tasklets.on('shutdown', () => {
+    console.log('  Shutdown event emitted');
+  });
+  
+  // Demonstrate idempotent shutdown
+  console.log('  Initiating shutdown...');
+  await tasklets.shutdown({ timeout: 1000 });
+  
+  // Multiple shutdown calls should return immediately
+  console.log('  Making additional shutdown calls (should return immediately)...');
+  const startTime = Date.now();
+  await tasklets.shutdown();
+  await tasklets.shutdown();
+  const endTime = Date.now();
+  console.log(`  Additional shutdown calls completed in ${endTime - startTime}ms (should be < 100ms)`);
+  console.log();
+
   console.log(' All API demonstrations completed successfully!');
   console.log('\n Summary of Available APIs:');
   console.log('  • run(taskFunction, options?) - Execute single task');
@@ -92,10 +133,21 @@ async function demonstrateAdvancedAPIs() {
   console.log('  • config(options) - Configure tasklets');
   console.log('  • getStats() - Get performance statistics');
   console.log('  • getHealth() - Get system health');
+  console.log('  • forceCleanup() - Force immediate cleanup (useful in tests)');
+  console.log('  • shutdown(options?) - Graceful shutdown (idempotent)');
+  console.log('\n Important Notes:');
+  console.log('  • Progress callbacks in batch operations may vary in frequency');
+  console.log('  • Memory counters may have small residual values (normal)');
+  console.log('  • Shutdown is idempotent: multiple calls return immediately');
+  console.log('  • Use forceCleanup() for deterministic results in tests');
 
   } catch (error) {
   console.error(' Error during demonstration:', error.message);
   console.error('Stack trace:', error.stack);
+  } finally {
+  // Ensure process terminates
+  console.log('\n Exiting process...');
+  process.exit(0);
   }
 }
 

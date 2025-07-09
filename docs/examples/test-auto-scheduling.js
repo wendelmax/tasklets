@@ -2,7 +2,7 @@
  * Test auto-scheduling functionality
  */
 
-const tasklets = require('./lib');
+const tasklets = require('../../lib');
 
 async function testAutoScheduling() {
   console.log('Testing Auto-Scheduling Functionality...\n');

@@ -407,7 +407,7 @@ describe('System Management Tests', () => {
 
   // Run a task then shutdown
   await tasklets.run(() => 'test');
-  
+
   // Shutdown with a reasonable timeout
   await tasklets.shutdown({timeout: 1000});
 

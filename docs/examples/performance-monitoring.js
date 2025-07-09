@@ -213,6 +213,7 @@ async function runPerformanceExamples() {
 
   clearInterval(healthMonitor);
   console.log('\n  Batch processing completed');
+  console.log('  Note: Progress callback frequency may vary due to parallel execution');
 
   // Analyze batch results
   const successful = batchResults.filter(r => r.success).length;
@@ -335,7 +336,25 @@ async function runPerformanceExamples() {
   console.log(`  System Uptime: ${Math.round(finalStats.system.uptime / 1000)}s`);
   console.log();
 
-  console.log(' Performance monitoring example completed successfully!');
+  console.log('  Performance monitoring demonstration completed successfully!');
+  console.log('\n Key Monitoring Features:');
+  console.log('  • Real-time performance metrics collection');
+  console.log('  • Health monitoring during task execution');
+  console.log('  • Error tracking and retry analysis');
+  console.log('  • Memory usage monitoring');
+  console.log('  • Worker utilization tracking');
+  console.log('  • Batch progress monitoring');
+  console.log('  • System health checks');
+
+  // Cleanup and shutdown
+  console.log('\n7. Cleanup and Shutdown:');
+  tasklets.forceCleanup();
+  const finalMemoryStats = tasklets.getMemoryStats();
+  console.log('  Final active tasklets:', finalMemoryStats.activeTasklets);
+  console.log('  Note: Small residual values are normal due to native delays');
+  
+  await tasklets.shutdown({ timeout: 1000 });
+  console.log('  System shutdown completed');
   }, 5000);
 }
 
