@@ -124,6 +124,7 @@ MemoryManager& MemoryManager::get_instance() {
 MemoryManager::MemoryManager() : 
     cleanup_interval_ms_(5000), // Default cleanup interval
     memory_limit_percent_(70.0), // Default memory limit
+    max_memory_bytes_(0), // Default max memory (0 = disabled/auto)
     total_tasklets_created_(0),
     cleanup_operations_count_(0),
     last_cleanup_time_(std::chrono::steady_clock::now()),
@@ -152,6 +153,7 @@ void MemoryManager::initialize(uv_loop_t* loop) {
     
     // Initialize default values
     cleanup_interval_ms_ = 5000; // Default cleanup interval
+    max_memory_bytes_ = 0; // Default max memory
     total_tasklets_created_ = 0;
     cleanup_operations_count_ = 0;
     last_cleanup_time_ = std::chrono::steady_clock::now();
@@ -381,15 +383,38 @@ bool MemoryManager::is_memory_usage_acceptable() const {
     uint64_t used_memory_bytes = total_memory_bytes - free_memory_bytes;
     double memory_usage_percent = (double)used_memory_bytes / total_memory_bytes * 100.0;
     
-    double limit = memory_limit_percent_.load();
-    
-    if (memory_usage_percent > limit) {
+    // Check percentage limit
+    double limit_percent = memory_limit_percent_.load();
+    if (memory_usage_percent > limit_percent) {
         Logger::warn("MemoryManager", "System memory usage (" + std::to_string(memory_usage_percent) + 
-                    "%) exceeds limit (" + std::to_string(limit) + "%)");
+                    "%) exceeds percentage limit (" + std::to_string(limit_percent) + "%)");
+        return false;
+    }
+    
+    // Check absolute byte limit if set
+    uint64_t limit_bytes = max_memory_bytes_.load();
+    if (limit_bytes > 0 && used_memory_bytes > limit_bytes) {
+        double used_mb = used_memory_bytes / (1024.0 * 1024.0);
+        double limit_mb = limit_bytes / (1024.0 * 1024.0);
+        Logger::warn("MemoryManager", "System memory usage (" + std::to_string(used_mb) + 
+                    " MB) exceeds absolute limit (" + std::to_string(limit_mb) + " MB)");
         return false;
     }
     
     return true;
+}
+
+void MemoryManager::set_max_memory_limit_bytes(uint64_t bytes) {
+    max_memory_bytes_.store(bytes);
+    if (bytes > 0) {
+        Logger::info("MemoryManager", "Max memory limit set to " + std::to_string(bytes / (1024.0 * 1024.0)) + " MB");
+    } else {
+        Logger::info("MemoryManager", "Max memory limit disabled (set to auto)");
+    }
+}
+
+uint64_t MemoryManager::get_max_memory_limit_bytes() const {
+    return max_memory_bytes_.load();
 }
 
 } // namespace tasklets 

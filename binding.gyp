@@ -12,7 +12,9 @@
         "src/core/memory/memory_manager.cpp",
         "src/core/monitoring/stats.cpp",
         "src/core/automation/auto_config.cpp",
-        "src/core/automation/auto_scheduler.cpp"
+        "src/core/automation/auto_scheduler.cpp",
+        "src/core/napi/js_executor.cpp",
+        "src/core/napi/state_manager.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
@@ -22,7 +24,8 @@
         "src/core/threading",
         "src/core/memory",
         "src/core/monitoring",
-        "src/core/automation"
+        "src/core/automation",
+        "src/core/napi"
       ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').gyp\")"
@@ -68,7 +71,8 @@
               "ExceptionHandling": 1,
               "WarningLevel": 3,
               "AdditionalOptions": [
-                "/std:c++17"
+                "/std:c++17",
+                "/EHsc"
               ]
             }
           }

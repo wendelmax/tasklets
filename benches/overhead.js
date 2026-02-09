@@ -1,5 +1,5 @@
 const Benchmark = require('benchmark');
-const tasklets = require('../lib/tasklets');
+const tasklets = require('../lib/index');
 
 const suite = new Benchmark.Suite('Overhead');
 
@@ -11,7 +11,7 @@ function fibonacci(n) {
 
 console.log('--- Comparando tasklets vs. execução nativa (Overhead) ---');
 
-tasklets.config({
+tasklets.configure({
     workers: 1, // Usar 1 worker para uma comparação mais direta
     logging: 'off',
 });
@@ -53,10 +53,14 @@ suite
             console.error('Could not find benchmarks to compare for overhead.');
         }
 
-        tasklets.shutdown();
+        tasklets.shutdown().then(() => {
+            process.exit(0);
+        });
     })
     .on('error', (event) => {
         console.error('Benchmark error:', event.target.error);
-        tasklets.shutdown();
+        tasklets.shutdown().then(() => {
+            process.exit(1);
+        });
     })
-    .run({async: true});
+    .run({ async: true });

@@ -9,12 +9,12 @@
  * - Performance and automation features
  */
 
-import tasklets, { 
-  Tasklets, 
-  TaskletConfig, 
-  TaskOptions, 
-  BatchTaskConfig, 
-  BatchOptions, 
+import tasklets, {
+  Tasklets,
+  TaskletConfig,
+  TaskOptions,
+  BatchTaskConfig,
+  BatchOptions,
   RetryOptions,
   TaskletStats,
   TaskletHealth,
@@ -71,7 +71,7 @@ async function testTypeScriptAPI() {
   console.log('🧪 Testing TypeScript API compatibility...');
 
   // Test configuration
-  tasklets.config(config);
+  tasklets.configure(config);
   console.log('✅ Configuration working');
 
   // Test basic task execution
@@ -143,7 +143,7 @@ async function testTypeScriptAPI() {
   // Test advanced processing methods
   const items = Array.from({ length: 10 }, (_, i) => i);
   const processor = (item: number) => item * 2;
-  
+
   const adaptiveResults = await tasklets.processBatchAdaptive(items, processor);
   console.log('✅ Adaptive batch processing working:', adaptiveResults);
 
@@ -197,18 +197,18 @@ function testClassInstantiation() {
   console.log('🧪 Testing class instantiation...');
 
   const taskletsInstance = new Tasklets();
-  
+
   // Test instance methods
-  taskletsInstance.config(config);
+  taskletsInstance.configure(config);
   console.log('✅ Class instantiation working');
 
   // Test event emitter functionality
   taskletsInstance.on('test-event', () => {
     console.log('✅ Event emitter working');
   });
-  
+
   taskletsInstance.emit('test-event');
-  
+
   return taskletsInstance;
 }
 
@@ -217,7 +217,7 @@ function testUtilityFunctions() {
   console.log('🧪 Testing utility functions...');
 
   // Test configuration helpers
-  const configuredTasklets = tasklets.config({
+  const configuredTasklets = tasklets.configure({
     workers: 4,
     timeout: 10000,
     logging: 'debug'

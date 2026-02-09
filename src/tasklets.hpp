@@ -66,10 +66,7 @@ Napi::Object CreateBatchResultObject(Napi::Env env, const std::vector<uint64_t>&
                                    const std::vector<std::string>& results, 
                                    const std::vector<std::string>& errors);
 
-/**
- * @brief Helper to create a promise that resolves with a result object
- */
-Napi::Promise CreatePromise(Napi::Env env, std::function<Napi::Object()> resultFunction);
+
 
 /**
  * @brief Executes a JavaScript function in the thread pool
@@ -124,6 +121,8 @@ Napi::Value GetBatchErrors(const Napi::CallbackInfo& info);
 
 Napi::Value GetSystemStatus(const Napi::CallbackInfo& info);
 Napi::Value GetMemoryStats(const Napi::CallbackInfo& info);
+Napi::Value SetMaxMemoryLimitBytes(const Napi::CallbackInfo& info);
+Napi::Value GetMaxMemoryLimitBytes(const Napi::CallbackInfo& info);
 
 // =====================================================================
 // Auto-Configuration Methods

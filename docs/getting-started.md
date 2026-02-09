@@ -1,152 +1,133 @@
 # Getting Started with Tasklets
 
-Welcome to Tasklets! This guide will help you get up and running with high-performance tasklets in Node.js.
+Tasklets is a high-performance, intelligent multi-threading library for Node.js. It provides true parallelism for CPU-intensive operations using a native C++ thread pool, preventing the main event loop from blocking.
 
-## What are Tasklets?
+## Key Features
 
-Tasklets are lightweight, cooperative tasks that provide true parallelism for CPU-intensive operations using a native C++ thread pool. This prevents heavy computations from blocking the main Node.js event loop.
+- **True Parallelism**: Real multi-threading (not just worker threads) using a native C++ core.
+- **Intelligent Execution**: Automatically detects and redirects trivial tasks to native execution to avoid overhead.
+- **Polymorphic API**: Seamlessly handle single tasks or arrays of tasks with one method.
+- **Zero-Config Adaptive Mode**: Automatically optimizes thread counts, timeouts, and memory based on your workload.
+- **Smart Serialization**: High-speed primitive transfer bypassing JSON overhead.
 
-## Why Choose Tasklets?
-
-- **Simple API**: An easy-to-use, Promise-based API with `await`.
-- **High Performance**: Offload heavy work to a native C++ thread pool for maximum speed.
-- **Promise-Native**: Built for modern JavaScript `async/await` patterns.
-- **TypeScript First**: Complete type definitions included.
+---
 
 ## Installation
 
-Install tasklets using npm:
-
 ```bash
-npm install tasklets
+npm install @wendelmax/tasklets
 ```
 
 ### Prerequisites
+- **Node.js**: v18.0.0 or higher.
+- **Build Tools**: Required for compiling the native addon (e.g., `build-essential` on Linux, `xcode-select --install` on macOS, or `windows-build-tools` on Windows).
 
-- Node.js 18.0.0 or higher
-- Native compilation tools (for building the C++ addon)
+---
 
-On Linux/macOS:
-```bash
-# Install build tools
-sudo apt-get install build-essential  # Ubuntu/Debian
-# or
-xcode-select --install  # macOS
-```
+## Basic Usage
 
-On Windows:
-```bash
-npm install --global windows-build-tools
-```
-
-## Your First Tasklet
-
-The easiest way to use tasklets is with the `run` function, which returns a Promise.
+### Single Task Execution
+The simplest way to offload work is using `run()`.
 
 ```javascript
-const tasklets = require('tasklets');
+const tasklets = require('@wendelmax/tasklets');
 
 async function main() {
-  console.log('Running a task in parallel...');
-  // Use tasklets.run and await the result
+  // Pass a function directly
   const result = await tasklets.run(() => {
-    // This code runs in a worker thread
     let sum = 0;
-    for (let i = 0; i <= 100000000; i++) {
-      sum += i;
-    }
+    for (let i = 0; i < 1e8; i++) sum += i;
     return sum;
   });
-
   console.log('Result:', result);
 }
-
 main();
 ```
 
-## Configuration
-
-You can configure certain aspects of the library, such as logging.
+### Multiple Tasks (Parallel)
+`run()` is polymorphic—pass an array to execute them in parallel across the pool.
 
 ```javascript
-const tasklets = require('tasklets');
-
-// Configure once at startup
-tasklets.config({
-  logging: 'info'  // Set log level ('off', 'error', 'warn', 'info', 'debug', 'trace')
-});
-
-// Now use tasklets anywhere in your application
-const result = await tasklets.run(() => 'My Task');
+const [res1, res2] = await tasklets.run([
+  () => heavyTask(1),
+  () => heavyTask(2)
+]);
 ```
+
+### Fast-Path Optimization
+For extremely simple tasks that don't need monitoring or retries, use `runFast()`:
+
+```javascript
+const result = await tasklets.runFast(() => 'Direct Execution');
+```
+
+---
+
+## Intelligent Performance
+
+Tasklets includes a **Heuristic Redirection** system. If you try to run a task that is too small (causing more overhead than benefit), Tasklets will:
+1. Detect the inefficiency (default threshold: <10ms).
+2. Automatically redirect future calls to native Main Thread execution.
+3. Log the optimization: `[Tasklets:Heuristic] Redirecting task to native execution...`
+
+---
+
+## Workload Profiles (Adaptive Mode)
+
+You can tell Tasklets what type of work you're doing to auto-tune the core:
+
+```javascript
+// High-level quick configuration
+tasklets.quickConfig('cpu-intensive'); 
+
+// Professional manual config
+tasklets.configure({
+  workers: 8,
+  heuristicMode: true,
+  minTaskDuration: 20, // ms
+  logging: 'info'
+});
+```
+
+| Profile | Strategy |
+| :--- | :--- |
+| `cpu-intensive` | Maximize worker threads, larger timeouts. |
+| `io-intensive` | Higher heuristic thresholds to avoid event-loop congestion. |
+| `balanced` | Optimized for mixed general-purpose workloads. |
+
+---
+
+## Monitoring & Health
+
+Keep track of your system performance in real-time.
+
+```javascript
+const stats = tasklets.getStats();
+// { completed_threads: 154, failed_threads: 0, average_execution_time_ms: 45.2 }
+
+const health = tasklets.getHealth();
+// { status: 'healthy', memoryUsagePercent: 42 }
+```
+
+---
 
 ## Error Handling
 
-Errors are handled automatically using standard `try...catch` blocks with Promises.
+Tasklets automatically catches exceptions in worker threads and projects them back to the main thread Promise.
 
 ```javascript
-const tasklets = require('tasklets');
-
-async function main() {
-  try {
-    const result = await tasklets.run(() => {
-      if (Math.random() > 0.5) {
-        throw new Error('This task failed randomly!');
-      }
-      return 'Success';
-    });
-    console.log('Result:', result);
-  } catch (error) {
-    console.error('Task failed:', error.message);
-  }
-}
-
-main();
-```
-
-## Monitoring
-
-You can get performance statistics and health information from the library.
-
-```javascript
-const tasklets = require('tasklets');
-
-// Get detailed performance statistics
-const stats = tasklets.getStats();
-console.log('Performance Stats:', stats);
-
-// Check system health
-const health = tasklets.getHealth();
-console.log('System Health:', health.status);
-```
-
-## Advanced Usage: Low-Level API
-
-For more complex scenarios where you need fine-grained control, you can use the low-level API. This involves manually managing tasklet IDs with `spawn` and `join`.
-
-This approach can be useful for patterns where you fire off many tasks and check their results later without blocking.
-
-```javascript
-const tasklets = require('tasklets');
-
-// Spawn a task but don't wait for it yet
-const taskId = tasklets.spawn(() => {
-  // some long-running task
-  return 'done';
-});
-
-console.log(`Task ${taskId} was spawned.`);
-
-// Later in your code...
-console.log('Waiting for the task to finish...');
-tasklets.join(taskId); // This will block until the task is done
-
-const status = tasklets.getStatus(taskId);
-if (status.hasError) {
-  console.error('Task failed:', status.error);
-} else {
-  console.log('Task succeeded:', status.result);
+try {
+  await tasklets.run(() => { throw new Error('Worker crash!'); });
+} catch (err) {
+  console.error('Caught in main thread:', err.message);
 }
 ```
 
-For a full list of low-level functions, please see the **[API Reference](api-reference.md)**.  
+---
+
+## Best Practices
+
+1. **Avoid Closures**: Task functions should be self-contained or use primitive inputs.
+2. **Batch Large Arrays**: Use `runAll()` or pass arrays to `run()` for mass execution.
+3. **Use runFast for I/O**: If a task is mostly waiting, `runFast` has the lowest overhead.
+4. **Tune your Profile**: Use `quickConfig` to match your hardware's capabilities.

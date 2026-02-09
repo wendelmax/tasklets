@@ -1,5 +1,5 @@
 const Benchmark = require('benchmark');
-const tasklets = require('../lib/tasklets');
+const tasklets = require('../lib/index');
 
 const suite = new Benchmark.Suite('batch()');
 
@@ -22,7 +22,7 @@ const cpuBatch = Array(20).fill(null).map((_, i) => ({
 
 console.log('--- Preparando benchmarks para tasklets.batch() ---');
 
-tasklets.config({
+tasklets.configure({
     workers: 'auto',
     logging: 'off',
 });
@@ -47,10 +47,14 @@ suite
     })
     .on('complete', function () {
         console.log(`\nFastest is ${this.filter('fastest').map('name')}`);
-        tasklets.shutdown();
+        tasklets.shutdown().then(() => {
+            process.exit(0);
+        });
     })
     .on('error', (event) => {
         console.error('Benchmark error:', event.target.error);
-        tasklets.shutdown();
+        tasklets.shutdown().then(() => {
+            process.exit(1);
+        });
     })
-    .run({async: true});
+    .run({ async: true });

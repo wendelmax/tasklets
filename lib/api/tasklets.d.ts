@@ -13,20 +13,35 @@
  * with Promise-based execution, automatic error handling, and intuitive configuration.
  */
 
-import {EventEmitter} from 'events';
+import { EventEmitter } from 'events';
 
 /**
  * Configuration options for tasklets
  */
 export interface TaskletConfig {
     /** Number of worker threads or 'auto' for automatic detection */
-    workers?: number | 'auto';
-    /** Default timeout in milliseconds for tasks */
-    timeout?: number;
-    /** Log level: 'off', 'error', 'warn', 'info', 'debug', 'trace' */
-    logging?: 'off' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+    workers?: number | 'auto' | { min?: number; max?: number; scaling?: string; value?: number };
+    /** Default timeout in ms or { default, perTask } */
+    timeout?: number | { default?: number; perTask?: boolean };
+    /** Log level or { level, format } */
+    logging?: 'off' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | { level?: string; format?: string };
     /** Maximum memory usage (not yet implemented) */
     maxMemory?: string;
+    /** Memory options: limit, cleanup */
+    memory?: { limit?: string; cleanup?: string };
+    /** Backpressure for streams: strategy, bufferSize */
+    backpressure?: { strategy?: 'buffer' | 'drop'; bufferSize?: number };
+}
+
+/**
+ * Stream returned by createStream()
+ */
+export interface TaskletStream extends EventEmitter {
+    write(task: () => any, options?: TaskOptions): boolean;
+    end(): void;
+    on(event: 'data', listener: (result: any) => void): this;
+    on(event: 'error', listener: (err: Error) => void): this;
+    on(event: 'end', listener: () => void): this;
 }
 
 /**
@@ -35,8 +50,9 @@ export interface TaskletConfig {
 export interface TaskOptions {
     /** Timeout for this specific task in milliseconds */
     timeout?: number;
+    /** Priority: high runs before normal, normal before low (queued tasks only) */
+    priority?: 'high' | 'normal' | 'low';
 
-    /** Additional options passed to the native module */
     [key: string]: any;
 }
 
@@ -140,34 +156,44 @@ export interface TaskletStats {
  */
 export interface TaskletHealth {
     /** Overall health status */
-    status: 'healthy' | 'unhealthy';
+    status: 'healthy' | 'degraded' | 'unhealthy';
     /** Worker thread information */
     workers: {
-        /** Number of worker threads */
         count: number;
-        /** Current utilization percentage */
+        active?: number;
         utilization: number;
     };
     /** Memory usage information */
     memory: {
-        /** Used memory in MB */
         used: number;
-        /** Total allocated memory in MB */
         total: number;
-        /** Memory usage percentage */
+        free?: number;
         percentage: number;
     };
     /** Task information */
     tasks: {
-        /** Number of completed tasks */
         completed: number;
-        /** Number of currently active tasks */
         active: number;
-        /** Number of queued tasks */
         queued: number;
+        failed?: number;
+        successRate?: number;
+        total?: number;
     };
-    /** Error message if unhealthy */
+    /** Latency metrics */
+    latency?: { averageExecutionTimeMs?: number };
+    /** Error metrics */
+    errors?: { rate?: number; failed?: number };
+    /** Process uptime in seconds */
+    uptime?: number;
     error?: string;
+}
+
+/**
+ * Errors from run() may include taskId and duration
+ */
+export interface TaskletError extends Error {
+    taskId?: bigint;
+    duration?: number;
 }
 
 /**
@@ -240,7 +266,12 @@ export declare class Tasklets extends EventEmitter {
      * @param config Configuration object
      * @returns This instance for chaining
      */
-    config(config?: TaskletConfig): this;
+    configure(config?: TaskletConfig): this;
+
+    /**
+     * Get the current configuration manager
+     */
+    readonly config: any;
 
     /**
      * Run a single task
@@ -273,6 +304,20 @@ export declare class Tasklets extends EventEmitter {
      * @returns Promise that resolves with the task result
      */
     retry<T>(task: () => T, options?: RetryOptions): Promise<T>;
+
+    /**
+     * Cancel a pending task (rejects its promise; native task may still run).
+     * @param taskletId Tasklet ID from run/spawn
+     * @returns true if a pending promise was cancelled
+     */
+    cancel(taskletId: bigint): boolean;
+
+    /**
+     * Create a stream for push-based task execution with backpressure.
+     * @param options backpressure 'buffer'|'drop', bufferSize
+     * @returns EventEmitter with write(task, options?), end(), and events 'data', 'error', 'end'
+     */
+    createStream(options?: { backpressure?: 'buffer' | 'drop'; bufferSize?: number }): TaskletStream;
 
     /**
      * Get system performance and statistics
@@ -445,7 +490,7 @@ export function retry<T>(task: () => T, options?: RetryOptions): Promise<T>;
  * @param config Configuration object
  * @returns The tasklets instance for chaining
  */
-export function config(config?: TaskletConfig): Tasklets;
+export function configure(config?: TaskletConfig): Tasklets;
 
 /**
  * Get system performance and statistics
@@ -474,7 +519,7 @@ export import TaskletContext = require('./taskletContext');
 /**
  * Export the Tasklets class
  */
-export {Tasklets};
+export { Tasklets };
 
 /**
  * Default export

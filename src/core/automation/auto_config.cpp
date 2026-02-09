@@ -32,8 +32,12 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#if defined(__linux__)
 #include <unistd.h>
 #include <sys/sysinfo.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace tasklets {
 
@@ -73,19 +77,36 @@ AutoConfig& AutoConfig::get_instance() {
     return *instance_;
 }
 
+void AutoConfig::analysis_async_callback(uv_async_t* handle) {
+    AutoConfig* config = static_cast<AutoConfig*>(handle->data);
+    if (config && config->auto_config_enabled_.load()) {
+        config->perform_analysis();
+    }
+}
+
+void AutoConfig::notify_job_completed() {
+    if (!auto_config_enabled_.load() || !is_initialized_.load()) return;
+    unsigned int prev = completed_jobs_since_analysis_.fetch_add(1);
+    if ((prev + 1) % JOB_TRIGGERED_ANALYSIS_INTERVAL == 0) {
+        completed_jobs_since_analysis_.store(0);
+        uv_async_send(&analysis_async_);
+    }
+}
+
 void AutoConfig::initialize(uv_loop_t* loop) {
     if (is_initialized_.load()) {
         return;
     }
     
-    // Initialize multiprocessor
     Multiprocessor::get_instance().initialize();
     
-    // Set up timer for periodic analysis
+    uv_async_init(loop, &analysis_async_, analysis_async_callback);
+    analysis_async_.data = this;
+    
     uv_timer_init(loop, &analysis_timer_);
     analysis_timer_.data = this;
     
-    int result = uv_timer_start(&analysis_timer_, timer_callback, 
+    int result = uv_timer_start(&analysis_timer_, timer_callback,
                                analysis_interval_ms_, analysis_interval_ms_);
     if (result != 0) {
         Logger::error("AutoConfig", "Failed to start analysis timer");
@@ -100,10 +121,9 @@ void AutoConfig::shutdown() {
     if (!is_initialized_.load()) {
         return;
     }
-    
     uv_timer_stop(&analysis_timer_);
+    uv_close(reinterpret_cast<uv_handle_t*>(&analysis_async_), nullptr);
     is_initialized_.store(false);
-    
     Logger::info("AutoConfig", "AutoConfig shutdown completed");
 }
 
@@ -232,20 +252,22 @@ AutoConfigMetrics AutoConfig::collect_metrics_parallel() {
     // Collect system metrics in parallel
     auto system_metrics = std::async(std::launch::async, [this]() {
         AutoConfigMetrics metrics;
-        
-        // Get system memory info
+        metrics.memory_usage_percent = 50.0;
+        metrics.cpu_utilization = 50.0;
+#if defined(__linux__)
         struct sysinfo si;
         if (sysinfo(&si) == 0) {
-            double total_mem = static_cast<double>(si.totalram) / (1024 * 1024 * 1024); // GB
-            double free_mem = static_cast<double>(si.freeram) / (1024 * 1024 * 1024); // GB
-            metrics.memory_usage_percent = ((total_mem - free_mem) / total_mem) * 100.0;
-        } else {
-            metrics.memory_usage_percent = 50.0; // Default fallback
+            double total_mem = static_cast<double>(si.totalram) / (1024 * 1024 * 1024);
+            double free_mem = static_cast<double>(si.freeram) / (1024 * 1024 * 1024);
+            if (total_mem > 0)
+                metrics.memory_usage_percent = ((total_mem - free_mem) / total_mem) * 100.0;
         }
-        
-        // Get CPU utilization (simplified)
-        metrics.cpu_utilization = 50.0; // Placeholder - would need more sophisticated CPU monitoring
-        
+#elif defined(_WIN32)
+        MEMORYSTATUSEX ms = { sizeof(MEMORYSTATUSEX) };
+        if (GlobalMemoryStatusEx(&ms)) {
+            metrics.memory_usage_percent = static_cast<double>(ms.dwMemoryLoad);
+        }
+#endif
         return metrics;
     });
     
@@ -258,7 +280,9 @@ AutoConfigMetrics AutoConfig::collect_metrics_parallel() {
         metrics.active_jobs = stats.active_threads;
         metrics.completed_jobs = stats.completed_threads;
         metrics.failed_jobs = stats.failed_threads;
-        metrics.worker_utilization = static_cast<double>(stats.active_threads) / stats.worker_threads;
+        metrics.worker_utilization = (stats.worker_threads > 0)
+            ? (static_cast<double>(stats.active_threads) / stats.worker_threads)
+            : 0.0;
         
         return metrics;
     });

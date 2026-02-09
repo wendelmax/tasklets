@@ -1,5 +1,5 @@
-# Source code (not needed in package)
-src/
+# Source code (KEEP for native compilation)
+# src/ (Explicitly included in package.json)
 examples/
 benchmarks/
 test/
@@ -20,7 +20,7 @@ build/
 .idea/
 
 # Configuration files
-binding.gyp
+# binding.gyp (Explicitly included in package.json)
 tsconfig.json
 jest.config.js
 .eslintrc*

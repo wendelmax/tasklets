@@ -224,6 +224,11 @@ public:
     void force_analysis();
 
     /**
+     * @brief Notify that a job completed (called from thread pool). May trigger deferred analysis.
+     */
+    void notify_job_completed();
+
+    /**
      * @brief Get detected workload pattern
      * @return Current workload pattern
      */
@@ -477,8 +482,13 @@ private:
     
     // Timer management
     uv_timer_t analysis_timer_;
+    uv_async_t analysis_async_;
     uint32_t analysis_interval_ms_;
-    
+    static constexpr unsigned int JOB_TRIGGERED_ANALYSIS_INTERVAL = 50;
+    std::atomic<unsigned int> completed_jobs_since_analysis_{0};
+
+    static void analysis_async_callback(uv_async_t* handle);
+
     // Callbacks
     mutable std::mutex callback_mutex_;
     std::vector<std::function<void(const AutoConfigRecommendations&)>> adjustment_callbacks_;

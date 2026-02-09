@@ -129,6 +129,9 @@ public:
 
     virtual MemoryStats get_memory_stats() const = 0;
     virtual MemoryStats get_system_memory_stats() const = 0;
+    
+    virtual void set_max_memory_limit_bytes(uint64_t bytes) = 0;
+    virtual uint64_t get_max_memory_limit_bytes() const = 0;
 };
 
 /**
@@ -211,6 +214,18 @@ public:
      */
     bool is_memory_usage_acceptable() const override;
     
+    /**
+     * @brief Set the maximum memory limit in bytes.
+     * @param bytes The maximum memory limit in bytes (0 for auto/disabled).
+     */
+    void set_max_memory_limit_bytes(uint64_t bytes) override;
+    
+    /**
+     * @brief Get the maximum memory limit in bytes.
+     * @return The maximum memory limit in bytes.
+     */
+    uint64_t get_max_memory_limit_bytes() const override;
+    
 private:
     MemoryManager();
     ~MemoryManager();
@@ -236,6 +251,7 @@ private:
     // Configuration
     std::atomic<uint32_t> cleanup_interval_ms_;
     std::atomic<double> memory_limit_percent_;
+    std::atomic<uint64_t> max_memory_bytes_;
 
     // State
     uv_timer_t cleanup_timer_;

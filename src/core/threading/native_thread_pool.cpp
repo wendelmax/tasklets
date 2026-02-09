@@ -30,6 +30,7 @@
 #include "native_thread_pool.hpp"
 #include "../memory/memory_manager.hpp"
 #include "../base/logger.hpp"
+#include "../automation/auto_config.hpp"
 #include <iostream>
 #include <chrono>
 #include <sstream>
@@ -219,6 +220,7 @@ void NativeThreadPool::after_work_callback(std::unique_ptr<MicroJob> job, int st
             stats_collector_->record_thread_failed();
         } else {
             stats_collector_->record_thread_completed(job->execution_duration);
+            AutoConfig::get_instance().notify_job_completed();
         }
         tasklet->mark_finished();
         tasklet->notify_completion();
