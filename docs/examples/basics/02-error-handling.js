@@ -72,7 +72,7 @@ async function basicErrorHandling() {
   const errors = [];
 
   const promises = Array.from({ length: taskCount }, (_, i) =>
-    tasklets.run(() => unreliableTask(i + 1))
+    tasklets.run(unreliableTask, i + 1)
       .then(result => ({ taskId: i + 1, success: true, result }))
       .catch(error => ({ taskId: i + 1, success: false, error: error.message }))
   );
@@ -104,10 +104,11 @@ async function basicErrorHandling() {
 async function retryPattern() {
   console.log('2. Retry Pattern:');
 
-  async function taskWithRetry(taskFn, maxRetries = 3, delay = 100) {
+  async function taskWithRetry(taskArg, maxRetries = 3, id = 0, failureRate = 0.5) {
+    let delayVal = 100;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const result = await tasklets.run(taskFn);
+        const result = await tasklets.run(unreliableTask, id, failureRate);
         return { success: true, result, attempts: attempt };
       } catch (error) {
         if (attempt === maxRetries) {
@@ -119,23 +120,23 @@ async function retryPattern() {
           };
         }
 
-        console.log(`  Attempt ${attempt} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2; // Exponential backoff
+        console.log(`  Attempt ${attempt} failed for task ${id}, retrying in ${delayVal}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayVal));
+        delayVal *= 2; // Exponential backoff
       }
     }
   }
 
-  const tasks = [
-    () => unreliableTask(1, 0.7), // High failure rate
-    () => unreliableTask(2, 0.5),
-    () => unreliableTask(3, 0.3),
-    () => unreliableTask(4, 0.8), // Very high failure rate
-    () => unreliableTask(5, 0.1)  // Low failure rate
+  const taskConfigs = [
+    { id: 1, rate: 0.7 }, // High failure rate
+    { id: 2, rate: 0.5 },
+    { id: 3, rate: 0.3 },
+    { id: 4, rate: 0.8 }, // Very high failure rate
+    { id: 5, rate: 0.1 }  // Low failure rate
   ];
 
   const results = await Promise.all(
-    tasks.map((task, index) => taskWithRetry(task, 3, 50))
+    taskConfigs.map(c => taskWithRetry(unreliableTask, 3, c.id, c.rate))
   );
 
   const successful = results.filter(r => r.success);
@@ -211,7 +212,7 @@ async function circuitBreakerPattern() {
   for (let i = 0; i < 15; i++) {
     try {
       const result = await circuitBreaker.execute(() =>
-        tasklets.run(() => unreliableTask(i + 1, 0.6))
+        tasklets.run(unreliableTask, i + 1, 0.6)
       );
       results.push({ taskId: i + 1, success: true, result });
     } catch (error) {
@@ -252,7 +253,7 @@ async function errorCategorizationPattern() {
   }
 
   const tasks = Array.from({ length: 15 }, (_, i) =>
-    tasklets.run(() => taskWithVariousErrors(i + 1))
+    tasklets.run(taskWithVariousErrors, i + 1)
       .then(result => ({ taskId: i + 1, success: true, result }))
       .catch(error => {
         const category = categorizeError(error);
@@ -303,12 +304,12 @@ async function gracefulDegradationPattern() {
 
   async function taskWithFallback(primaryTask, fallbackTask, id) {
     try {
-      const result = await tasklets.run(primaryTask);
+      const result = await tasklets.run(unreliableTask, id, 0.7);
       return { taskId: id, result, source: 'primary' };
     } catch (primaryError) {
       console.log(`  Task ${id}: Primary failed, trying fallback...`);
       try {
-        const result = await tasklets.run(fallbackTask);
+        const result = await tasklets.run(unreliableTask, id, 0.2);
         return { taskId: id, result, source: 'fallback' };
       } catch (fallbackError) {
         return {
@@ -352,9 +353,12 @@ async function bulkheadPattern() {
     const results = [];
 
     for (let i = 0; i < tasks.length; i += concurrency) {
-      const batch = tasks.slice(i, i + concurrency);
+      const batchBatch = tasks.slice(i, i + concurrency);
       const batchResults = await Promise.allSettled(
-        batch.map(task => tasklets.run(task))
+        batchBatch.map(t => {
+          if (typeof t === 'function') return tasklets.run(t);
+          return tasklets.run(t.task, ...(t.args || []));
+        })
       );
 
       batchResults.forEach((result, index) => {
@@ -372,15 +376,15 @@ async function bulkheadPattern() {
 
   // Three different types of workloads
   const criticalTasks = Array.from({ length: 6 }, (_, i) =>
-    () => unreliableTask(`Critical-${i + 1}`, 0.2)
+    ({ task: unreliableTask, args: [`Critical-${i + 1}`, 0.2] })
   );
 
   const regularTasks = Array.from({ length: 8 }, (_, i) =>
-    () => unreliableTask(`Regular-${i + 1}`, 0.4)
+    ({ task: unreliableTask, args: [`Regular-${i + 1}`, 0.4] })
   );
 
   const backgroundTasks = Array.from({ length: 10 }, (_, i) =>
-    () => unreliableTask(`Background-${i + 1}`, 0.6)
+    ({ task: unreliableTask, args: [`Background-${i + 1}`, 0.6] })
   );
 
   // Process each batch with different concurrency limits

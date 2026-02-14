@@ -1,36 +1,37 @@
 /**
  * Fibonacci Parallel Computation Example - Using runAll
- * 
- * This example demonstrates how to use tasklets.runAll() to execute multiple
- * functions in parallel and get results as a Promise, similar to Promise.all().
- * 
- * Key features:
- * - runAll: High-level API for parallel execution
- * - async/await: Clean promise-based syntax
- * - automatic result collection: Results are returned in the same order as input
- * 
- * Usage: node examples/fibonacci-runAll.js
  */
 
 const tasklets = require('../../../lib');
 
-function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
-
-const numbers = [20, 21, 22, 23, 24];
+const numbers = [35, 36, 37, 38, 39];
 
 (async () => {
   console.log('Parallel Fibonacci with runAll:');
 
-  // Cria um array de funções para cada número
-  const tasks = numbers.map(n => () => fibonacci(n));
+  // Create tasks that are self-contained. 
+  // We pass 'n' as an argument to the task function.
+  const tasks = numbers.map(n => ({
+    task: (num) => {
+      function fib(x) {
+        if (x <= 1) return x;
+        return fib(x - 1) + fib(x - 2);
+      }
+      return fib(num);
+    },
+    args: [n]
+  }));
 
-  // Executa todas em paralelo e aguarda os resultados
+  const startTime = Date.now();
+  // Execute all in parallel
   const results = await tasklets.runAll(tasks);
+  const endTime = Date.now();
 
   numbers.forEach((n, i) => {
     console.log(`fib(${n}) = ${results[i]}`);
   });
-})(); 
+
+  console.log(`Total time: ${endTime - startTime}ms`);
+
+  await tasklets.terminate();
+})();

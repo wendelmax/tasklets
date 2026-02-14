@@ -7,61 +7,29 @@ on:
     branches: [main, master]
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  test:
+    name: Test on ${{ matrix.os }} with Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18, 20]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18, 20, 22, 23]
+
     steps:
       - uses: actions/checkout@v4
+      
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+          
       - name: Install dependencies
         run: npm ci
-      - name: Build native addon (Linux)
-        run: npm run build
-      - name: Run tests
+        
+      - name: Run Tests
         run: npm test -- --forceExit
-
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        node-version: [18, 20]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build native addon (macOS)
-        run: npm run build
-      - name: Upload macOS Prebuild
-        uses: actions/upload-artifact@v4
-        with:
-            name: prebuild-macos
-            path: build/Release/tasklets.node
-      - name: Run tests
-        run: npm test -- --forceExit
-
-  build-windows-cross:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build Windows Artifact (Cross-compile)
-        run: npm run build:prebuilds:windows:docker
-      - name: Verify Artifact exists
-        run: ls -l build/Release/tasklets.node || ls -l build/tasklets.node
+        
+      - name: Run Examples (Verification)
+        run: node docs/examples/basics/01-hello-parallel.js

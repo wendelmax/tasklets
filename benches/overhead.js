@@ -3,7 +3,6 @@ const tasklets = require('../lib/index');
 
 const suite = new Benchmark.Suite('Overhead');
 
-// Função de Fibonacci para simular uma tarefa que consome CPU
 function fibonacci(n) {
     if (n < 2) return n;
     return fibonacci(n - 2) + fibonacci(n - 1);
@@ -12,18 +11,25 @@ function fibonacci(n) {
 console.log('--- Comparando tasklets vs. execução nativa (Overhead) ---');
 
 tasklets.configure({
-    workers: 1, // Usar 1 worker para uma comparação mais direta
+    workers: 1,
     logging: 'off',
 });
 
 suite
-    .add('Native JS execution (fibonacci)', () => {
+    .add('Native JS execution', () => {
         fibonacci(20);
     })
     .add('tasklets.run(fibonacci)', {
         defer: true,
         fn: async (deferred) => {
-            await tasklets.run(() => fibonacci(20));
+            // Inline the recursive function so it exists in worker scope
+            await tasklets.run((n) => {
+                function fib(x) {
+                    if (x < 2) return x;
+                    return fib(x - 2) + fib(x - 1);
+                }
+                return fib(n);
+            }, 20);
             deferred.resolve();
         },
     })
@@ -31,36 +37,9 @@ suite
         console.log(String(event.target));
     })
     .on('complete', function () {
-        console.log(`\nFastest is ${this.filter('fastest').map('name')}`);
-
-        let nativeBenchmark, taskletBenchmark;
-        for (let i = 0; i < this.length; i++) {
-            const bench = this[i];
-            if (bench.name.startsWith('Native')) {
-                nativeBenchmark = bench;
-            } else if (bench.name.startsWith('tasklets')) {
-                taskletBenchmark = bench;
-            }
-        }
-
-        if (nativeBenchmark && taskletBenchmark) {
-            const nativeTime = nativeBenchmark.stats.mean;
-            const taskletTime = taskletBenchmark.stats.mean;
-            const overhead = ((taskletTime - nativeTime) / nativeTime) * 100;
-
-            console.log(`Overhead: ${overhead.toFixed(2)}%`);
-        } else {
-            console.error('Could not find benchmarks to compare for overhead.');
-        }
-
-        tasklets.shutdown().then(() => {
+        console.log('Benchmark completed');
+        tasklets.terminate().then(() => {
             process.exit(0);
-        });
-    })
-    .on('error', (event) => {
-        console.error('Benchmark error:', event.target.error);
-        tasklets.shutdown().then(() => {
-            process.exit(1);
         });
     })
     .run({ async: true });

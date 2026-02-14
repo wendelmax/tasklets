@@ -1,56 +1,51 @@
 # Tasklets - Modern High-Performance Tasklets for Node.js
 
-A **breakthrough implementation** of lightweight cooperative tasklets for Node.js with a **modern Promise-based API**. This project delivers **massive concurrency** using native **libuv thread pool** integration and intuitive JavaScript patterns, providing **true parallelism** with **exceptional performance**.
+A **breakthrough implementation** of lightweight cooperative tasklets for Node.js with a **modern Promise-based API**. This project delivers **massive concurrency** using native **Node.js Worker Threads** and intuitive JavaScript patterns, providing **true parallelism** with **exceptional performance**.
 
 [![NPM Version](https://img.shields.io/npm/v/@wendelmax/tasklets.svg)](https://www.npmjs.com/package/@wendelmax/tasklets)
-[![Build Status](https://img.shields.io/github/workflow/status/wendelmax/tasklets/CI)](https://github.com/wendelmax/tasklets/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/@wendelmax/tasklets)](https://nodejs.org/)
 
-## Version 1.0.0 - Modern API Revolution
+## Version 2.0.0 - Native Revolution
 
-**Complete API redesign** with focus on **developer experience** and **simplicity**:
+**Complete native rewrite** with focus on **compatibility** and **simplicity**:
 
+- **Zero Dependencies**: 100% Native JavaScript (ES2020)
+- **Cross-Platform**: Works anywhere Node.js runs (Windows, Linux, macOS)
+- **No Compilation**: No `node-gyp`, Python, or Visual Studio required
 - **Promise-based**: Native `async/await` support
-- **80% less code** for common operations
-- **Automatic error handling** - no manual checking
-- **Fluent configuration** - set once, use everywhere
-- **Built-in retry** with exponential backoff
-- **Progress tracking** for batch operations
-- **Health monitoring** and graceful shutdown
+- **True Parallelism**: Uses `worker_threads` for non-blocking execution
 
 ## Key Features
 
 - **Ultra-Simple API**: One-line task execution with `await`
 - **Automatic Configuration**: Zero-config with intelligent defaults
 - **Massive Concurrency**: Support for thousands of simultaneous tasklets
-- **Exceptional Performance**: Native C++ implementation with libuv thread pool
+- **Thread Safety**: Isolated contexts avoid common threading issues
 
 ### Intelligent Task Execution
 
-Tasklets now features an intelligent execution engine that automatically optimizes your workload:
+Tasklets features an intelligent execution engine that automatically optimizes your workload:
 
 - **Polymorphic API**: Pass a single function or an array of functions to `run()`.
-- **Automatic Heuristics**: Trivial tasks are automatically redirected to native execution if the overhead exceeds the benefit.
-- **Adaptive Profiles**: Performance thresholds adjust automatically based on your workload type (CPU vs IO).
+- **Argument Passing**: Safely pass data to workers without closure issues.
 
 ```javascript
 // Single task
 const res = await tasklets.run(() => 2 + 2);
 
+// Task with arguments (Safe way to pass data)
+const data = { value: 42 };
+const res = await tasklets.run((input) => {
+    return input.value * 2;
+}, data);
+
 // Multiple tasks (parallel)
-const [res1, res2] = await tasklets.run([
+const [res1, res2] = await tasklets.runAll([
     () => heavy1(),
     () => heavy2()
 ]);
 ```
-- **True Parallelism**: Real parallel execution across multiple worker threads
-- **Smart System Adaptation**: Automatically detects and adapts to your hardware capabilities
-- **Automated Adaptive Configuration**: Intelligent runtime optimization based on performance metrics
-- **Intelligent Auto-Scheduler**: Automatic MicroJob and NativeThreadPool optimization
-- **Promise-Native**: Built for modern JavaScript patterns
-- **TypeScript First**: Complete type definitions included
-- **Production Ready**: Comprehensive error handling and monitoring
 
 ## Installation
 
@@ -60,19 +55,11 @@ npm install @wendelmax/tasklets
 
 ### Prerequisites
 
-- **Node.js** >= 18.0.0
-- **C++ compiler** with C++17 support
-- **Python 3** (for node-gyp)
+- **Node.js** >= 14.0.0
 
-For detailed installation instructions and troubleshooting, see the [Getting Started Guide](docs/getting-started.md).
+That's it! No compilers, no Python, no build tools.
 
 ## Quick Start
-
-### Installation
-
-```bash
-npm install @wendelmax/tasklets
-```
 
 ### Basic Usage
 
@@ -89,8 +76,8 @@ const result = await tasklets.run(() => {
     return sum;
 });
 
-// NEW: Also supports arrays directly!
-const [res1, res2] = await tasklets.run([
+// Parallel execution
+const [res1, res2] = await tasklets.runAll([
     () => heavyWork1(),
     () => heavyWork2()
 ]);
@@ -101,13 +88,15 @@ console.log('Result:', result);
 ### Advanced Usage
 
 ```javascript
-const tasklets = require('tasklets');
+const tasklets = require('@wendelmax/tasklets');
 
-// Configure tasklets
-tasklets.config({
-    workers: 4,           // Use 4 worker threads
-    timeout: 30000,       // 30 second timeout
-    logging: 'info'       // Info level logging
+// Configure tasklets with Dynamic Scaling
+// The pool automatically scales up to 'maxWorkers' under load
+// and scales down to 'minWorkers' when idle.
+tasklets.configure({
+    minWorkers: 2,      // Keep 2 workers warm (default: 1)
+    maxWorkers: 16,     // Cap at 16 workers (default: CPU cores)
+    idleTimeout: 10000  // Terminate idle workers after 10s (default: 5000ms)
 });
 
 // Parallel execution
@@ -117,513 +106,113 @@ const results = await tasklets.runAll([
     () => processData3()
 ]);
 
-// Batch processing with progress tracking
+// Batch processing
 const batchResults = await tasklets.batch([
     { name: 'task1', task: () => heavyWork1() },
-    { name: 'task2', task: () => heavyWork2() },
-    { name: 'task3', task: () => heavyWork3() }
-], {
-    progress: (completed, total, name) => {
-        console.log(`Progress: ${completed}/${total} - ${name}`);
-    }
-});
-
-// Retry with exponential backoff
-const retryResult = await tasklets.retry(() => {
-    return unreliableApiCall();
-}, {
-    attempts: 3,
-    delay: 1000,
-    exponentialBackoff: true
-});
-
-// Graceful shutdown
-await tasklets.shutdown({ timeout: 5000 });
+    { name: 'task2', task: (val) => heavyWork2(val), args: [123] }
+]);
 ```
 
-## Modern API Overview
+## Observability
 
-### Core Tasklets Functions
+Monitor your application's health and performance in real-time:
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `run(fn, options?)` | Execute a single task | `await tasklets.run(() => work())` |
-| `runAll(tasks, options?)` | Execute tasks in parallel | `await tasklets.runAll([task1, task2])` |
-| `batch(configs, options?)` | Batch processing with progress | `await tasklets.batch(tasks, { progress })` |
-| `retry(fn, options?)` | Retry with exponential backoff | `await tasklets.retry(() => api(), { attempts: 3 })` |
-
-### Configuration & Monitoring
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `config(options)` | Configure tasklets | `tasklets.config({ workers: 'auto' })` |
-| `getStats()` | Get performance statistics | `const stats = tasklets.getStats()` |
-| `getHealth()` | Get system health | `const health = tasklets.getHealth()` |
-| `shutdown(options?)` | Graceful shutdown | `await tasklets.shutdown()` |
-
-### Configuration Options
+### System Statistics
 
 ```javascript
-// Tasklets configuration
-tasklets.config({
-    workers: 'auto',        // Worker count: 'auto' or number
-    timeout: 30000,         // Default timeout (ms)
-    logging: 'info',        // Log level: 'off', 'error', 'warn', 'info', 'debug', 'trace'
-    maxMemory: '1GB'        // Memory limit (future)
-});
+const stats = tasklets.getStats();
+console.log(stats);
+// Output:
+// {
+//   activeTasks: 2,           // Tasks currently in progress
+//   totalWorkers: 8,          // Total worker threads in pool
+//   activeWorkers: 2,         // Workers currently busy
+//   idleWorkers: 6,           // Workers waiting for tasks
+//   queuedTasks: 0,           // Tasks waiting in the queue
+//   throughput: 154.2,        // Tasks completed per second
+//   avgTaskTime: 45.2,        // Average execution time in ms
+//   config: { ... }           // Current pool configuration
+// }
 ```
 
-## TypeScript Support
+### Health Monitoring
 
-Full TypeScript support with intelligent type inference:
-
-```typescript
-import tasklets from 'tasklets';
-
-// Type-safe task execution
-const result: number = await tasklets.run((): number => {
-    return Math.random() * 100;
-});
-
-// Type-safe parallel processing
-const results: string[] = await tasklets.runAll([
-    (): string => 'task1',
-    (): string => 'task2'
-]);
-
-// Type-safe configuration
-tasklets.config({
-    workers: 8,
-    timeout: 5000,
-    logging: 'debug'
-});
-
-// Type-safe batch processing
-interface TaskConfig {
-    name: string;
-    task: () => Promise<number>;
-}
-
-const batchResults = await tasklets.batch([
-    { name: 'computation1', task: async () => computeValue1() },
-    { name: 'computation2', task: async () => computeValue2() }
-], {
-    onProgress: (progress) => {
-        console.log(`Progress: ${progress.percentage}%`);
-    }
-});
+```javascript
+const health = tasklets.getHealth();
+console.log(health);
+// Output:
+// {
+//   status: 'healthy',        // Overall system status
+//   workers: 8,               // Current worker count
+//   memoryUsagePercent: 42.5  // System memory usage
+// }
 ```
 
 ## Architecture
 
-### High-Performance Design
+### Native Worker Design
 
 ```mermaid
 graph TD
     NodeApp[Node.js Application] --> JS_API
     
-    subgraph "Modern JavaScript API"
-        JS_API[Core Tasklets API<br/>• run, runAll, batch, retry, config<br/>• getStats, getHealth, shutdown<br/>• Promise-based, async/await, TypeScript support]
+    subgraph "Native JavaScript API"
+        JS_API[Core Tasklets API<br/>• run, runAll, batch<br/>• Promise-based, async/await]
     end
     
-    JS_API --> NAPI[N-API Bindings<br/>• napi_wrapper.cpp • tasklets_api.cpp • Type Conversion]
+    JS_API --> WorkerPool[Worker Pool Manager]
     
-    NAPI --> NativeCore
-    
-    subgraph "Native C++ Core"
-        NativeCore[NativeThreadPool Singleton]
-        NativeCore --- Stats[StatsCollector Metrics]
-        NativeCore --- Logger[Logger Thread-Safe]
-        NativeCore --- Task[Tasklet Task State]
-        NativeCore --- MicroJob[MicroJob libuv Work]
-    end
-    
-    MicroJob --> UVPool
-    
-    subgraph "libuv Thread Pool"
-        UVPool[Worker Threads]
-        UVPool --- T1[Native Thread #1]
-        UVPool --- T2[Native Thread #2]
-        UVPool --- T3[Native Thread #3]
+    subgraph "Node.js Worker Threads"
+        WorkerPool --- W1[Worker Thread #1]
+        WorkerPool --- W2[Worker Thread #2]
+        WorkerPool --- W3[Worker Thread #3]
+        WorkerPool --- W4[Worker Thread #4]
     end
 ```
 
-### Core Features
+### Why Native?
 
-Our **high-performance tasklets system** focuses on maximum efficiency and ease of use:
-
-- **Zero-overhead execution** - Direct C++ binding with minimal JavaScript layer
-- **Promise-native API** - Modern async/await support with intelligent error handling
-- **Smart defaults** - Works out of the box with automatic thread pool sizing
-- **Built-in monitoring** - Real-time statistics and health monitoring
-- **Configurable behavior** - Fine-tune performance for your specific needs
-- **Automated adaptation** - Intelligent runtime optimization based on performance metrics
-
-## **Performance & Use Cases**
-
-### **Performance Numbers**
-
-Benchmarks comparing tasklets vs native Node.js:
-
-| Scenario | Node.js (baseline) | Tasklets | Improvement |
-|----------|-------------------|----------|-------------|
-| CPU-intensive computation | 1000ms | 250ms | **4x faster** |
-| Parallel processing (4 cores) | 4000ms | 1000ms | **4x faster** |
-| Mixed I/O + CPU workload | 2000ms | 800ms | **2.5x faster** |
-
-> **Note**: These performance figures are based on our internal benchmark suite. Actual results are subjective and highly dependent on the specific use case, hardware configuration, and allocated machine resources.
-
-
-### **Core Tasklets Use Cases:**
-
-- **CPU-intensive computations** - Mathematical calculations, data processing
-- **Parallel workflows** - Multiple independent tasks running simultaneously  
-- **Batch processing** - Large datasets with progress tracking
-- **Resilient operations** - Automatic retry with exponential backoff
-- **Real-time systems** - Low-latency processing with resource monitoring
+- **Stability**: No more "Module did not self-register" or ABI mismatch errors.
+- **Portability**: Code runs identically on local dev, CI runners, and production servers.
+- **Performance**: While C++ threads are lighter, Node.js Workers provide better isolation and safety for JavaScript execution.
 
 ## Performance Best Practices
 
-### Understanding Thread Overhead
+### Passing Data
 
-Tasklets use native threads for true parallelism, which introduces overhead for thread creation, context switching, and data serialization. Based on our benchmarks:
+Workers run in isolated contexts. Does not share memory (heap) with the main thread.
+**Always use arguments** to pass data instead of relying on closures.
 
-- **Native execution**: ~8,710 ops/sec
-- **Tasklets execution**: ~9 ops/sec
-- **Overhead**: ~95,000% for small tasks
+```javascript
+// BAD - Variable 'externalData' is not available in worker scope
+const externalData = 100;
+await tasklets.run(() => {
+    return 5 + externalData; // Crash! 'externalData' is undefined
+});
 
-**This overhead is expected and acceptable** for CPU-intensive work, but means tasklets are **not suitable for all scenarios**.
+// GOOD - Pass as argument
+const externalData = 100;
+await tasklets.run((val) => {
+    return 5 + val;
+}, externalData);
+```
 
 ### When to Use Tasklets
 
-Use tasklets when your tasks meet these criteria:
+1. **CPU-Intensive Work (>10ms execution time)**
+   Encryption, image processing, complex calculations.
 
-1. **CPU-Intensive Work (>100ms execution time)**
-   ```javascript
-   // GOOD: Heavy computation
-   await tasklets.run(() => {
-       return processLargeImage(imageData);  // Takes 500ms
-   });
-   ```
+2. **Blocking Operations**
+   JSON parsing large files, synchronous compression.
 
-2. **Blocking Operations That Would Freeze the Event Loop**
-   ```javascript
-   // GOOD: Prevents UI freeze
-   await tasklets.run(() => {
-       return calculateComplexAlgorithm(data);  // Takes 2 seconds
-   });
-   ```
-
-3. **True Parallelization Across Multiple Cores**
-   ```javascript
-   // GOOD: Parallel processing
-   const results = await tasklets.runAll([
-       () => processChunk1(data),  // Core 1
-       () => processChunk2(data),  // Core 2
-       () => processChunk3(data),  // Core 3
-       () => processChunk4(data)   // Core 4
-   ]);
-   ```
-
-### When NOT to Use Tasklets
-
-Avoid tasklets for these scenarios:
-
-1. **Quick Operations (<10ms)**
-   ```javascript
-   // BAD: Thread overhead > actual work
-   await tasklets.run(() => {
-       return x + y;  // Takes <1ms
-   });
-   
-   // GOOD: Use native code
-   const result = x + y;
-   ```
-
-2. **I/O Operations**
-   ```javascript
-   // BAD: Node.js already handles I/O async
-   await tasklets.run(async () => {
-       return await fetch('https://api.example.com');
-   });
-   
-   // GOOD: Use native async/await
-   const response = await fetch('https://api.example.com');
-   ```
-
-3. **Already Asynchronous Operations**
-   ```javascript
-   // BAD: Database queries are already async
-   await tasklets.run(async () => {
-       return await db.query('SELECT * FROM users');
-   });
-   
-   // GOOD: Use the async operation directly
-   const users = await db.query('SELECT * FROM users');
-   ```
-
-### Performance Guidelines
-
-| Task Duration | Recommendation | Reason |
-|---------------|----------------|--------|
-| < 10ms | **Never use tasklets** | Overhead >> benefit |
-| 10-100ms | **Rarely use tasklets** | Overhead still significant |
-| 100ms - 1s | **Consider tasklets** | Good for CPU-bound work |
-| > 1s | **Ideal for tasklets** | Overhead negligible |
-
-### Optimization Tips
-
-1. **Batch Small Operations**
-   ```javascript
-   // BAD: Many small tasks
-   for (let i = 0; i < 1000; i++) {
-       await tasklets.run(() => smallWork(i));
-   }
-   
-   // GOOD: One large task
-   await tasklets.run(() => {
-       return Array.from({ length: 1000 }, (_, i) => smallWork(i));
-   });
-   ```
-
-2. **Profile Before Optimizing**
-   ```javascript
-   // Measure actual execution time
-   console.time('native');
-   const nativeResult = heavyComputation();
-   console.timeEnd('native');
-   
-   console.time('tasklets');
-   const taskletResult = await tasklets.run(() => heavyComputation());
-   console.timeEnd('tasklets');
-   ```
-
-3. **Use Appropriate Worker Count**
-   ```javascript
-   // For CPU-bound: match CPU cores
-   tasklets.config({ workers: require('os').cpus().length });
-   
-   // For mixed workload: use 'auto'
-   tasklets.config({ workers: 'auto' });
-   ```
-
-
-## Examples
-
-### CPU-Intensive Processing
-
-```javascript
-const tasklets = require('tasklets');
-
-async function fibonacci(n) {
-    return await tasklets.run(() => {
-        function fib(num) {
-            if (num < 2) return num;
-            return fib(num - 1) + fib(num - 2);
-        }
-        return fib(n);
-    });
-}
-
-console.log(await fibonacci(40)); // Runs in worker thread
-```
-
-### Parallel Data Processing
-
-```javascript
-const tasklets = require('tasklets');
-
-async function processDatasets(datasets) {
-    return await tasklets.runAll(datasets.map(dataset => 
-        () => processDataset(dataset)
-    ));
-}
-
-function processDataset(data) {
-    // Heavy data processing
-    return data.map(item => ({ ...item, processed: true }));
-}
-
-const results = await processDatasets([data1, data2, data3]);
-```
-
-### Batch Processing with Progress
-
-```javascript
-const tasklets = require('tasklets');
-
-async function processFiles(filePaths) {
-    return await tasklets.batch(
-        filePaths.map(path => ({
-            name: `process-${path}`,
-            task: () => processFile(path)
-        })),
-        {
-            onProgress: (progress) => {
-                console.log(`Processed ${progress.completed}/${progress.total} files`);
-            }
-        }
-    );
-}
-
-function processFile(filePath) {
-    // File processing logic
-    return { file: filePath, processed: true };
-}
-```
-
-### Resilient API Calls
-
-```javascript
-const tasklets = require('tasklets');
-
-async function fetchWithRetry(url) {
-    return await tasklets.retry(async () => {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        return response.json();
-    }, {
-        attempts: 3,
-        delay: 1000,
-        exponentialBackoff: true
-    });
-}
-```
-
-### Automated Adaptive Configuration
-
-```javascript
-const tasklets = require('tasklets');
-
-// Enable intelligent adaptive optimization
-tasklets.enableAdaptiveMode();
-
-// Set workload type for better optimization
-tasklets.setWorkloadType('cpu-intensive');
-
-// Run tasks - system automatically optimizes settings
-const results = await tasklets.runAll([
-    () => heavyComputation(),
-    () => dataProcessing(),
-    () => fileOperations()
-]);
-
-// Check adaptive metrics
-const metrics = tasklets.getAdaptiveMetrics();
-const lastAdjustment = tasklets.getLastAdjustment();
-
-console.log('Performance metrics:', metrics);
-console.log('Last optimization:', lastAdjustment);
-```
-
-The adaptive system automatically:
-- **Scales worker threads** based on CPU utilization
-- **Adjusts memory limits** based on memory pressure
-- **Optimizes batch sizes** for maximum throughput
-- **Monitors performance** and makes intelligent adjustments
-- **Adapts to workload changes** in real-time
-
-### Intelligent Auto-Scheduler
-
-```javascript
-const tasklets = require('tasklets');
-
-// Enable intelligent auto-scheduling
-tasklets.enableAutoScheduling();
-
-// Run different workload types - auto-scheduler detects patterns
-await tasklets.runAll([
-    // CPU-intensive tasks
-    () => heavyComputation(),
-    () => mathematicalProcessing(),
-    
-    // I/O-intensive tasks
-    () => fileOperations(),
-    () => networkRequests(),
-    
-    // Memory-intensive tasks
-    () => largeDataProcessing(),
-    () => imageProcessing()
-]);
-
-// Get auto-scheduling recommendations
-const recommendations = tasklets.getAutoSchedulingRecommendations();
-console.log('Worker scaling:', recommendations.should_scale_up ? 'Scale UP' : 'Maintain');
-console.log('Recommended workers:', recommendations.recommended_worker_count);
-console.log('Confidence:', (recommendations.worker_scaling_confidence * 100).toFixed(1) + '%');
-
-// Apply recommendations automatically
-tasklets.applyAutoSchedulingRecommendations();
-
-// Monitor performance patterns
-const metricsHistory = tasklets.getAutoSchedulingMetricsHistory();
-const patterns = metricsHistory.map(m => m.detected_pattern);
-console.log('Detected patterns:', patterns);
-```
-
-The auto-scheduler intelligently:
-- **Detects workload patterns** (CPU-intensive, I/O-intensive, Memory-intensive, Burst, Steady, Mixed)
-- **Estimates job complexity** (Trivial, Simple, Moderate, Complex, Heavy)
-- **Scales worker threads** based on utilization and patterns
-- **Adjusts timeouts** based on job complexity and failure rates
-- **Recommends priorities** based on workload characteristics
-- **Suggests batching strategies** for optimal throughput
-- **Optimizes load balancing** across workers
-- **Provides confidence scores** for all recommendations
-
-## Recent Improvements
-
-### Version 1.0.0 Highlights
-
-1. **Simplified API** - Modern Promise-based interface with 80% less boilerplate
-2. **Performance boost** - Optimized native bindings with reduced overhead
-3. **Enhanced monitoring** - Built-in health checks and comprehensive statistics
-4. **Smart configuration** - Auto-detecting optimal settings for your hardware
-5. **TypeScript-first** - Complete type definitions with intelligent inference
-
-
-## Development
-
-From the repository root after cloning:
-
-```bash
-npm install
-npm run build
-npm test
-npm run example
-npm run examples
-```
-
-On **Windows**, the build step requires [Visual Studio Build Tools](https://github.com/nodejs/node-gyp#on-windows) with the "Desktop development with C++" workload. Without it, `node-gyp rebuild` fails and tests/examples cannot load the native addon.
-
-- **build**: compile the native addon and TypeScript declarations
-- **test**: run the Jest test suite
-- **example**: run the basic example (`docs/examples/basic.js`)
-- **examples**: run all examples in `docs/examples/`
-
-## Documentation
-
-- [API Reference](docs/api-reference.md) - Complete API documentation
-- [Getting Started](docs/getting-started.md) - Step-by-step tutorial
-- [Examples](docs/examples.md) - Real-world usage examples
-- [Performance Guide](docs/performance-guide.md) - Optimization tips
-- [Adaptive Configuration](docs/adaptive-configuration.md) - Automated optimization system
-- [Best Practices](docs/best-practices.md) - Recommended patterns
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+3. **True Parallelization**
+   Running multiple independent tasks simultaneously.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
 ## Support
 
-- Email: jacksonwendel@gmail.com
-- Discord: [Join our community](https://discord.gg/tasklets)
+- Email: jacksonwendel @ gmail.com
 - Issues: [GitHub Issues](https://github.com/wendelmax/tasklets/issues)
-- Documentation: [Full Documentation](https://docs.tasklets.dev) 
