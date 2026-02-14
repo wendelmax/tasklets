@@ -1,6 +1,6 @@
 /**
  * @file batch-processing.js
- * @brief Example demonstrating modern batch processing with Tasklets
+ * @brief Example demonstrating batch processing with Tasklets
  */
 
 const tasklets = require('../../../lib');
@@ -22,14 +22,13 @@ async function main() {
     { name: 'random-walk', task: () => Math.random() > 0.5 ? 'Stepped Right' : 'Stepped Left' }
   ];
 
-  const results = await tasklets.batch(taskConfigs, {
-    progress: (p) => {
-      console.log(`  [Progress] ${p.name}: ${p.percentage}% (${p.completed}/${p.total})`);
-    }
-  });
+  // Note: batch() returns just the results array in the same order
+  const results = await tasklets.batch(taskConfigs);
 
-  console.log('\nBatch 1 Results:');
-  results.forEach(r => console.log(`  - ${r.name}: ${r.result}`));
+  console.log('\nBatch Results:');
+  results.forEach((result, index) => {
+    console.log(`  - ${taskConfigs[index].name}: ${result}`);
+  });
   console.log();
 
   // 2. Simple array execution (polymorphic run/runAll)
@@ -40,10 +39,12 @@ async function main() {
     () => Math.sqrt(144)
   ];
 
-  const simpleResults = await tasklets.run(anonymousTasks);
+  // run() can take an array just like runAll()
+  const simpleResults = await tasklets.runAll(anonymousTasks);
   console.log('Simple Results:', simpleResults);
 
   console.log('\nBatch processing example completed successfully!');
+  await tasklets.terminate();
 }
 
 main().catch(console.error);

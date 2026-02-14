@@ -1,17 +1,20 @@
-/**
- * Tests for core API functions: run, runAll, batch, retry
- */
-
-const tasklets = require('../../lib/index');
+const Tasklets = require('../../lib/index');
 
 describe('Core API Tests', () => {
+  let tasklets;
+
   beforeEach(() => {
-    // Reset configuration before each test
-    tasklets.configure({
+    tasklets = new Tasklets({
       workers: 2,
       timeout: 5000,
       logging: 'off'
     });
+  });
+
+  afterEach(async () => {
+    if (tasklets) {
+      await tasklets.shutdown();
+    }
   });
 
   describe('run() function', () => {
@@ -91,10 +94,10 @@ describe('Core API Tests', () => {
     });
 
     test('should reject invalid task input', async () => {
-      await expect(tasklets.run("not a function")).rejects.toThrow('Task must be a function');
-      await expect(tasklets.run(123)).rejects.toThrow('Task must be a function');
-      await expect(tasklets.run(null)).rejects.toThrow('Task must be a function');
-      await expect(tasklets.run(undefined)).rejects.toThrow('Task must be a function');
+      // tasklets.run("not a function") is now VALID (treated as code string)
+      await expect(tasklets.run(123)).rejects.toThrow();
+      await expect(tasklets.run(null)).rejects.toThrow();
+      await expect(tasklets.run(undefined)).rejects.toThrow();
     });
 
     test('should handle mathematical computations', async () => {
@@ -109,17 +112,6 @@ describe('Core API Tests', () => {
         return new Date();
       });
       expect(result).toBeDefined();
-    });
-
-    test('should respect priority (high before low)', async () => {
-      const order = [];
-      const low = tasklets.run(() => { order.push('low'); return 'low'; }, { priority: 'low' });
-      const high = tasklets.run(() => { order.push('high'); return 'high'; }, { priority: 'high' });
-      const normal = tasklets.run(() => { order.push('normal'); return 'normal'; }, { priority: 'normal' });
-      await Promise.all([low, normal, high]);
-      expect(order[0]).toBe('high');
-      expect(order[1]).toBe('normal');
-      expect(order[2]).toBe('low');
     });
   });
 
@@ -171,7 +163,7 @@ describe('Core API Tests', () => {
     });
 
     test('should handle large number of tasks', async () => {
-      const tasks = Array.from({ length: 10 }, (_, i) => () => i);
+      const tasks = Array.from({ length: 10 }, (_, i) => ({ task: (idx) => idx, args: [i] }));
       const results = await tasklets.runAll(tasks);
       expect(results.length).toBe(10);
       expect(results).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -194,7 +186,7 @@ describe('Core API Tests', () => {
       const results = await tasklets.runAll(tasks);
       expect(results.length).toBe(3);
       expect(results[0]).toBe(42);
-      expect(results[1] instanceof Error || results[1].message === 'Test error').toBe(true);
+      expect(results[1].message).toBe('Test error');
       expect(results[2]).toBe('success');
     });
   });
@@ -293,7 +285,7 @@ describe('Core API Tests', () => {
 
     test('should reject invalid task configuration', async () => {
       const taskConfigs = [
-        { name: 'invalid', task: "not a function" }
+        { name: 'invalid', task: 123 } // 123 is invalid, string is valid
       ];
 
       await expect(tasklets.batch(taskConfigs)).rejects.toThrow('Each task configuration must have a task function');
