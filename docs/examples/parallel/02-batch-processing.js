@@ -22,12 +22,16 @@ async function main() {
     { name: 'random-walk', task: () => Math.random() > 0.5 ? 'Stepped Right' : 'Stepped Left' }
   ];
 
-  // Note: batch() returns just the results array in the same order
+  // Note: batch() returns an array of result objects with { name, result, success, error }
   const results = await tasklets.batch(taskConfigs);
 
   console.log('\nBatch Results:');
-  results.forEach((result, index) => {
-    console.log(`  - ${taskConfigs[index].name}: ${result}`);
+  results.forEach((item) => {
+    if (item.success) {
+      console.log(`  - ${item.name}: ${item.result}`);
+    } else {
+      console.log(`  - ${item.name}: Error - ${item.error}`);
+    }
   });
   console.log();
 

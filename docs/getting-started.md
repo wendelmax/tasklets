@@ -71,7 +71,7 @@ console.log(`Memory Usage: ${health.memoryUsagePercent}%`);
 
 ### Multiple Tasks (Parallel)
 
-`runAll()` (or simply passing an array to `run()`) executes tasks in parallel.
+`runAll()` executes tasks in parallel.
 
 ```javascript
 const [res1, res2] = await tasklets.runAll([

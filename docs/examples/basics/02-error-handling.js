@@ -353,9 +353,9 @@ async function bulkheadPattern() {
     const results = [];
 
     for (let i = 0; i < tasks.length; i += concurrency) {
-      const batchBatch = tasks.slice(i, i + concurrency);
+      const chunk = tasks.slice(i, i + concurrency);
       const batchResults = await Promise.allSettled(
-        batchBatch.map(t => {
+        chunk.map(t => {
           if (typeof t === 'function') return tasklets.run(t);
           return tasklets.run(t.task, ...(t.args || []));
         })
