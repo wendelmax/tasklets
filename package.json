@@ -16,10 +16,8 @@
     "test": "jest --forceExit",
     "test:typescript": "ts-node test-typescript.ts",
     "test:all": "npm test && npm run test:typescript",
-    "example": "node docs/examples/basic.js",
-    "examples": "node scripts/run-examples.js",
-    "prepublishOnly": "npm run test",
-    "bench": "npm run bench:image && npm run bench:data && npm run bench:crypto"
+    "example": "node docs/examples/basics/01-hello-parallel.js",
+    "prepublishOnly": "npm run test"
   },
   "keywords": [
     "tasklets",
