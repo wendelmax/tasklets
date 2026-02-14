@@ -42,6 +42,11 @@ jobs:
         run: npm ci
       - name: Build native addon (macOS)
         run: npm run build
+      - name: Upload macOS Prebuild
+        uses: actions/upload-artifact@v4
+        with:
+            name: prebuild-macos
+            path: build/Release/tasklets.node
       - name: Run tests
         run: npm test -- --forceExit
 
