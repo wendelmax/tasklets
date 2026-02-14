@@ -33,7 +33,9 @@
 #include <cmath>
 #include <sstream>
 #include <unistd.h>
+#ifdef __linux__
 #include <sys/sysinfo.h>
+#endif
 
 namespace tasklets {
 
@@ -259,6 +261,7 @@ AutoSchedulerMetrics AutoScheduler::collect_metrics() {
         (static_cast<double>(metrics.active_jobs) / metrics.worker_count) * 100.0 : 0.0;
 
     // Get system metrics
+#ifdef __linux__
     struct sysinfo si;
     if (sysinfo(&si) == 0) {
         uint64_t total_memory = si.totalram * si.mem_unit;
@@ -266,6 +269,7 @@ AutoSchedulerMetrics AutoScheduler::collect_metrics() {
         uint64_t used_memory = total_memory - free_memory;
         metrics.memory_usage = (static_cast<double>(used_memory) / total_memory) * 100.0;
     }
+#endif
 
     // Estimate CPU usage based on worker utilization
     metrics.cpu_usage = std::min(100.0, metrics.worker_utilization * 1.2);

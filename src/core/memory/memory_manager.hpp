@@ -43,7 +43,7 @@ namespace tasklets {
 
 // Forward declarations
 class Tasklet;
-class MicroJob;
+struct MicroJob;
 
 /**
  * @brief Memory pool for object reuse to reduce allocation overhead

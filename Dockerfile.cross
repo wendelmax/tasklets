@@ -1,0 +1,26 @@
+FROM node:20-bullseye
+
+# Install dependencies and MinGW-w64
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    build-essential \
+    cmake \
+    mingw-w64 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create a CMake toolchain file for MinGW
+RUN echo "set(CMAKE_SYSTEM_NAME Windows)" > /etc/toolchain-mingw.cmake && \
+    echo "set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)" >> /etc/toolchain-mingw.cmake && \
+    echo "set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)" >> /etc/toolchain-mingw.cmake && \
+    echo "set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)" >> /etc/toolchain-mingw.cmake && \
+    echo "set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)" >> /etc/toolchain-mingw.cmake
+
+# Pre-install dependencies (optional optimization)
+# COPY package.json package-lock.json ./
+# RUN npm ci
+
+CMD ["bash"]

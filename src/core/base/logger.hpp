@@ -35,6 +35,13 @@
 
 namespace tasklets {
 
+// Undefine conflicting Windows macros
+#undef ERROR
+#undef WARN
+#undef INFO
+#undef DEBUG
+#undef TRACE
+
 /**
  * @brief Log levels for controlling output verbosity
  */
