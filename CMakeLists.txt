@@ -88,7 +88,7 @@ endif()
 # Common definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     NAPI_DISABLE_CPP_EXCEPTIONS
-    TASKLETS_VERSION="1.0.0"
+    TASKLETS_VERSION="1.0.3"
     NODE_GYP_MODULE_NAME=tasklets
 )
 

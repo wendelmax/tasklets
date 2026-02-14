@@ -1,6 +1,6 @@
 {
   "name": "@wendelmax/tasklets",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Modern high-performance tasklets for Node.js with Promise-based API, automatic error handling, and intuitive configuration",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -21,7 +21,7 @@
     "build:debug": "cmake-js compile --debug && npm run build:types",
     "build:types": "tsc --declaration --outDir lib --noEmit false",
     "build:prebuilds": "npm run build:prebuilds:windows && npm run build:prebuilds:linux:container",
-    "build:prebuilds:linux": "prebuildify --platform=linux --arch=x64 --target=18.0.0 --strip",
+    "build:prebuilds:linux": "cmake-js compile && mkdir -p prebuilds/linux-x64 && cp build/Release/tasklets.node prebuilds/linux-x64/node.napi.node",
     "build:prebuilds:linux:container": "podman run --rm -v \"%cd%:/app\" -w /app node:20-bullseye bash -c \"apt-get update && apt-get install -y python3 make g++ build-essential cmake libuv1-dev && npm install && npm run build:prebuilds:linux\"",
     "build:prebuilds:macos": "prebuildify --platform=darwin --arch=x64 --target=18.0.0 --strip",
     "build:prebuilds:windows": "prebuildify --platform=win32 --arch=x64 --target=18.0.0 --strip",
@@ -36,7 +36,7 @@
     "examples": "node scripts/run-examples.js",
     "clean": "cmake-js clean && rm -rf prebuilds/",
     "prepublishOnly": "npm run test",
-    "install": "cmake-js compile",
+    "install": "node scripts/install.js",
     "package": "npm pack",
     "package:test": "npm-pack-test",
     "test:watch": "jest --watch --forceExit",
@@ -69,7 +69,8 @@
   "author": "Jackson Wendel Santos Sá",
   "license": "MIT",
   "dependencies": {
-    "node-addon-api": "^7.0.0"
+    "node-addon-api": "^7.0.0",
+    "node-gyp-build": "^4.8.4"
   },
   "devDependencies": {
     "@types/node": "^20.19.5",
