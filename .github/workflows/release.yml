@@ -6,18 +6,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_release:
-    name: Build and Release
+  publish:
+    name: Publish to NPM
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
       
       - run: npm ci
-      - run: npm run build:prebuilds
-      - run: npm publish
+      - run: npm test -- --forceExit
+      
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

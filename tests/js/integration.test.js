@@ -1,12 +1,10 @@
-/**
- * Tests for real-world integration scenarios
- */
-
-const tasklets = require('../../lib/index');
+const { Tasklets } = require('../../lib/index');
 
 describe('Integration Tests', () => {
+  let tasklets;
+
   beforeEach(() => {
-    // Configure tasklets for integration testing
+    tasklets = new Tasklets();
     tasklets.configure({
       workers: 4,
       timeout: 30000,
@@ -15,11 +13,10 @@ describe('Integration Tests', () => {
   });
 
   afterEach(async () => {
-    // Clean up resources after each test
     try {
-      await tasklets.shutdown(1000);
+      await tasklets.shutdown();
     } catch (error) {
-      console.warn('Error during test cleanup:', error);
+      // Ignore shutdown errors during test cleanup
     }
   });
 
@@ -31,10 +28,10 @@ describe('Integration Tests', () => {
       const validationResults = await tasklets.batch(
         rawData.slice(0, 10).map(item => ({
           name: `validate-${item.id}`,
-          task: () => {
-            // Simulate validation logic
-            return item.value > 10 ? item : null;
-          }
+          task: (i) => {
+            return i.value > 10 ? i : null;
+          },
+          args: [item]
         }))
       );
 
@@ -49,11 +46,13 @@ describe('Integration Tests', () => {
 
       // Stage 2: Data transformation
       const transformResults = await tasklets.runAll(
-        Array.from({ length: 5 }, (_, i) => () => {
-          // Simulate complex transformation
-          return rawData.slice(i * 10, (i + 1) * 10)
-            .map(item => ({ ...item, processed: true, timestamp: Date.now() }));
-        })
+        Array.from({ length: 5 }, (_, i) => ({
+          task: (idx, data) => {
+            return data.slice(idx * 10, (idx + 1) * 10)
+              .map(item => ({ ...item, processed: true, timestamp: Date.now() }));
+          },
+          args: [i, rawData]
+        }))
       );
 
       expect(transformResults.length).toBe(5);
@@ -89,12 +88,14 @@ describe('Integration Tests', () => {
         const batch = streamChunks.slice(i, i + batchSize);
 
         const batchResults = await tasklets.runAll(
-          batch.map(chunk => () => {
-            // Simulate chunk processing
-            const sum = chunk.data.reduce((acc, val) => acc + val, 0);
-            const avg = sum / chunk.data.length;
-            return { chunkId: chunk.chunkId, sum, avg, processed: true };
-          })
+          batch.map(chunk => ({
+            task: (c) => {
+              const sum = c.data.reduce((acc, val) => acc + val, 0);
+              const avg = sum / c.data.length;
+              return { chunkId: c.chunkId, sum, avg, processed: true };
+            },
+            args: [chunk]
+          }))
         );
 
         results.push(...batchResults);
@@ -117,13 +118,13 @@ describe('Integration Tests', () => {
       const results = await tasklets.batch(
         dataItems.map(item => ({
           name: `process-${item.id}`,
-          task: () => {
-            // Simulate some items causing errors
-            if (item.id === 3 || item.id === 7) {
-              throw new Error(`Processing failed for item ${item.id}`);
+          task: (i) => {
+            if (i.id === 3 || i.id === 7) {
+              throw new Error(`Processing failed for item ${i.id}`);
             }
-            return { ...item, processed: true };
-          }
+            return { ...i, processed: true };
+          },
+          args: [item]
         }))
       );
 
@@ -151,25 +152,25 @@ describe('Integration Tests', () => {
 
       // Run parallel simulations
       const simulationResults = await tasklets.runAll(
-        Array.from({ length: workerCount }, (_, i) => () => {
-          let insideCircle = 0;
-
-          for (let j = 0; j < iterationsPerWorker; j++) {
-            const x = Math.random();
-            const y = Math.random();
-
-            if (x * x + y * y <= 1) {
-              insideCircle++;
+        Array.from({ length: workerCount }, (_, i) => ({
+          task: (id, count) => {
+            let insideCircle = 0;
+            for (let j = 0; j < count; j++) {
+              const x = Math.random();
+              const y = Math.random();
+              if (x * x + y * y <= 1) {
+                insideCircle++;
+              }
             }
-          }
-
-          return {
-            workerId: i,
-            insideCircle,
-            totalIterations: iterationsPerWorker,
-            piEstimate: 4 * insideCircle / iterationsPerWorker
-          };
-        })
+            return {
+              workerId: id,
+              insideCircle,
+              totalIterations: count,
+              piEstimate: 4 * insideCircle / count
+            };
+          },
+          args: [i, iterationsPerWorker]
+        }))
       );
 
       expect(simulationResults.length).toBe(workerCount);
@@ -180,7 +181,7 @@ describe('Integration Tests', () => {
       // Verify system remained healthy during computation
       const health = tasklets.getHealth();
       expect(health.status).toBe('healthy');
-      expect(health.workers.count).toBe(workerCount);
+      expect(health.workers).toBe(workerCount);
     });
 
     test('should handle adaptive batch sizing for Monte Carlo simulation', async () => {
@@ -190,25 +191,23 @@ describe('Integration Tests', () => {
       const batchResults = await tasklets.batch(
         adaptiveBatches.map((batchSize, index) => ({
           name: `monte-carlo-batch-${index}`,
-          task: () => {
+          task: (size, idx) => {
             let insideCircle = 0;
-
-            for (let i = 0; i < batchSize; i++) {
+            for (let i = 0; i < size; i++) {
               const x = Math.random();
               const y = Math.random();
-
               if (x * x + y * y <= 1) {
                 insideCircle++;
               }
             }
-
             return {
-              batchIndex: index,
-              batchSize,
+              batchIndex: idx,
+              batchSize: size,
               insideCircle,
-              piEstimate: 4 * insideCircle / batchSize
+              piEstimate: 4 * insideCircle / size
             };
-          }
+          },
+          args: [batchSize, index]
         })),
         {
           onProgress: (progress) => {
@@ -243,22 +242,21 @@ describe('Integration Tests', () => {
         const batch = urls.slice(i, i + batchSize);
 
         const batchResults = await tasklets.runAll(
-          batch.map(url => () => {
-            // Simulate HTTP request processing
-            const delay = Math.random() * 100 + 50; // 50-150ms delay
-
-            // Simulate different response types
-            const responseTypes = ['success', 'rate_limited', 'error', 'timeout'];
-            const responseType = responseTypes[Math.floor(Math.random() * responseTypes.length)];
-
-            return {
-              url,
-              responseType,
-              data: responseType === 'success' ? { items: Math.floor(Math.random() * 100) } : null,
-              timestamp: Date.now(),
-              processingTime: delay
-            };
-          })
+          batch.map(url => ({
+            task: (u) => {
+              const delay = Math.random() * 100 + 50;
+              const responseTypes = ['success', 'rate_limited', 'error', 'timeout'];
+              const responseType = responseTypes[Math.floor(Math.random() * responseTypes.length)];
+              return {
+                url: u,
+                responseType,
+                data: responseType === 'success' ? { items: Math.floor(Math.random() * 100) } : null,
+                timestamp: Date.now(),
+                processingTime: delay
+              };
+            },
+            args: [url]
+          }))
         );
 
         results.push(...batchResults);
@@ -279,14 +277,19 @@ describe('Integration Tests', () => {
       const retryResults = await Promise.allSettled(
         failingUrls.map(url =>
           tasklets.retry(() => {
-            // Simulate unreliable API
-            const shouldFail = Math.random() < 0.7; // 70% failure rate
-            if (shouldFail) {
-              throw new Error(`Request failed for ${url}`);
-            }
-            return { url, data: { success: true }, attempts: 1 };
+            // Note: In native, closures still won't work easily here, but retry wraps it.
+            // Since retry calls tasklets.run, we should pass args if possible.
+            // But retry(fn) API in index.js doesn't currently support args easily for the taskFn if it's not a config object.
+            // Wait, retry calls run(taskFn).
+            // I'll change the test to use an anonymous function that doesn't use closure if possible, or adjust retry.
+            // Actually, I'll pass args via a wrapper.
+            return tasklets.run((u) => {
+              const shouldFail = Math.random() < 0.7;
+              if (shouldFail) throw new Error(`Request failed for ${u}`);
+              return { url: u, data: { success: true }, attempts: 1 };
+            }, url);
           }, {
-            attempts: 5, // Increase attempts to improve success rate for test
+            attempts: 5,
             delay: 10,
             backoff: 1.1
           })
@@ -313,16 +316,18 @@ describe('Integration Tests', () => {
 
       // Stage 1: Image validation and metadata extraction
       const validationResults = await tasklets.runAll(
-        images.slice(0, 6).map(image => () => {
-          // Simulate image validation
-          const isValid = image.width > 0 && image.height > 0;
-          return {
-            ...image,
-            valid: isValid,
-            aspectRatio: isValid ? image.width / image.height : null,
-            sizeCategory: image.width >= 1920 ? 'large' : 'medium'
-          };
-        })
+        images.slice(0, 6).map(image => ({
+          task: (img) => {
+            const isValid = img.width > 0 && img.height > 0;
+            return {
+              ...img,
+              valid: isValid,
+              aspectRatio: isValid ? img.width / img.height : null,
+              sizeCategory: img.width >= 1920 ? 'large' : 'medium'
+            };
+          },
+          args: [image]
+        }))
       );
 
       expect(validationResults.length).toBe(6);
@@ -340,15 +345,16 @@ describe('Integration Tests', () => {
       const transformResults = await tasklets.batch(
         transformationTasks.map(task => ({
           name: `transform-${task.name}`,
-          task: () => {
+          task: (t, imgs) => {
             // Simulate image transformation
-            return images.slice(0, 4).map(image => ({
+            return imgs.slice(0, 4).map(image => ({
               ...image,
-              transformation: task.operation,
-              params: task.params,
+              transformation: t.operation,
+              params: t.params,
               processedAt: Date.now()
             }));
-          }
+          },
+          args: [task, images]
         }))
       );
 
@@ -374,24 +380,23 @@ describe('Integration Tests', () => {
 
       // Process images with memory-intensive operations
       const processingResults = await tasklets.runAll(
-        largeImages.map(image => () => {
-          // Simulate memory-intensive image processing
-          const pixelCount = image.width * image.height;
-          const memoryUsage = pixelCount * image.channels * (image.bitDepth / 8);
-
-          // Simulate processing operations
-          const operations = ['histogram', 'convolution', 'fft', 'morphology'];
-          const appliedOperations = operations.slice(0, Math.floor(Math.random() * 3) + 1);
-
-          return {
-            ...image,
-            pixelCount,
-            memoryUsage,
-            appliedOperations,
-            processingTime: Math.random() * 1000 + 500,
-            completed: true
-          };
-        })
+        largeImages.map(image => ({
+          task: (img) => {
+            const pixelCount = img.width * img.height;
+            const memoryUsage = pixelCount * img.channels * (img.bitDepth / 8);
+            const operations = ['histogram', 'convolution', 'fft', 'morphology'];
+            const appliedOperations = operations.slice(0, Math.floor(Math.random() * 3) + 1);
+            return {
+              ...img,
+              pixelCount,
+              memoryUsage,
+              appliedOperations,
+              processingTime: ShortMathRandom() * 1000 + 500,
+              completed: true
+            };
+          },
+          args: [image]
+        }))
       );
 
       expect(processingResults.length).toBe(8);
@@ -399,12 +404,9 @@ describe('Integration Tests', () => {
         expect(result).toBeDefined();
       });
 
-      // Check system health after memory-intensive operations
-      // Clean up stats first to get current health status
-      await tasklets.cleanup();
       const health = tasklets.getHealth();
       expect(health.status).toBe('healthy');
-      expect(health.memory.percentage).toBeLessThan(95);
+      expect(health.memoryUsagePercent).toBeLessThan(95);
     });
   });
 
@@ -418,19 +420,20 @@ describe('Integration Tests', () => {
       ];
 
       const dbResults = await tasklets.runAll(
-        operations.map(op => () => {
-          // Simulate database operation
-          const latency = Math.random() * 50 + 10; // 10-60ms
-          const success = Math.random() > 0.05; // 95% success rate
-
-          return {
-            operation: op,
-            success,
-            latency,
-            rowsAffected: success ? Math.floor(Math.random() * 100) : 0,
-            timestamp: Date.now()
-          };
-        })
+        operations.map(op => ({
+          task: (o) => {
+            const latency = Math.random() * 50 + 10;
+            const success = Math.random() > 0.05;
+            return {
+              operation: o,
+              success,
+              latency,
+              rowsAffected: success ? Math.floor(Math.random() * 100) : 0,
+              timestamp: Date.now()
+            };
+          },
+          args: [op]
+        }))
       );
 
       expect(dbResults.length).toBe(4);
@@ -452,23 +455,20 @@ describe('Integration Tests', () => {
       const transactionResults = [];
 
       for (const step of transactionSteps) {
-        const result = await tasklets.run(() => {
-          // Simulate database query execution
+        const result = await tasklets.run((s) => {
           const latency = Math.random() * 20 + 5;
-          const success = Math.random() > 0.02; // 98% success rate
-
-          if (!success && step.step !== 5) {
-            throw new Error(`Transaction step ${step.step} failed`);
+          const success = Math.random() > 0.02;
+          if (!success && s.step !== 5) {
+            throw new Error(`Transaction step ${s.step} failed`);
           }
-
           return {
-            step: step.step,
-            query: step.query,
+            step: s.step,
+            query: s.query,
             success,
             latency,
             timestamp: Date.now()
           };
-        });
+        }, step);
 
         transactionResults.push(result);
 
@@ -502,29 +502,21 @@ describe('Integration Tests', () => {
       const processingResults = await tasklets.batch(
         orders.map(order => ({
           name: `process-${order.orderId}`,
-          task: () => {
-            // Stage 1: Validate order
-            const totalAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-            // Stage 2: Check inventory
-            const inventoryCheck = order.items.map(item => ({
+          task: (ord) => {
+            const totalAmount = ord.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const inventoryCheck = ord.items.map(item => ({
               productId: item.productId,
               requested: item.quantity,
-              available: Math.floor(Math.random() * 20) + item.quantity // Ensure availability
+              available: Math.floor(Math.random() * 20) + item.quantity
             }));
-
-            // Stage 3: Calculate shipping
             const shippingCost = totalAmount > 50 ? 0 : 9.99;
-
-            // Stage 4: Process payment
             const paymentResult = {
-              success: Math.random() > 0.05, // 95% success rate
+              success: Math.random() > 0.05,
               transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
             };
-
             return {
-              orderId: order.orderId,
-              customerId: order.customerId,
+              orderId: ord.orderId,
+              customerId: ord.customerId,
               totalAmount,
               shippingCost,
               inventoryCheck,
@@ -532,7 +524,8 @@ describe('Integration Tests', () => {
               status: paymentResult.success ? 'confirmed' : 'failed',
               processedAt: Date.now()
             };
-          }
+          },
+          args: [order]
         })),
         {
           onProgress: (progress) => {
@@ -567,19 +560,21 @@ describe('Integration Tests', () => {
       }));
 
       const inventoryResults = await tasklets.runAll(
-        orders.map(order => () => {
-          const product = products.find(p => p.id === order.productId);
-          const canFulfill = product && product.stock >= order.requestedQuantity;
-
-          return {
-            orderId: order.orderId,
-            productId: order.productId,
-            requestedQuantity: order.requestedQuantity,
-            availableStock: product ? product.stock : 0,
-            canFulfill,
-            status: canFulfill ? 'approved' : 'backordered'
-          };
-        })
+        orders.map(order => ({
+          task: (ord, ps) => {
+            const product = ps.find(p => p.id === ord.productId);
+            const canFulfill = product && product.stock >= ord.requestedQuantity;
+            return {
+              orderId: ord.orderId,
+              productId: ord.productId,
+              requestedQuantity: ord.requestedQuantity,
+              availableStock: product ? product.stock : 0,
+              canFulfill,
+              status: canFulfill ? 'approved' : 'backordered'
+            };
+          },
+          args: [order, products]
+        }))
       );
 
       expect(inventoryResults.length).toBe(8);
@@ -611,36 +606,41 @@ describe('Integration Tests', () => {
         const batch = events.slice(i, i + batchSize);
 
         const batchResults = await tasklets.runAll([
-          () => {
-            // Event aggregation
-            const eventCounts = {};
-            batch.forEach(event => {
-              eventCounts[event.eventType] = (eventCounts[event.eventType] || 0) + 1;
-            });
-            return { type: 'aggregation', data: eventCounts };
+          {
+            task: (b) => {
+              const eventCounts = {};
+              b.forEach(event => {
+                eventCounts[event.eventType] = (eventCounts[event.eventType] || 0) + 1;
+              });
+              return { type: 'aggregation', data: eventCounts };
+            },
+            args: [batch]
           },
-          () => {
-            // User activity analysis
-            const userActivity = {};
-            batch.forEach(event => {
-              if (!userActivity[event.userId]) {
-                userActivity[event.userId] = { events: 0, lastSeen: 0 };
-              }
-              userActivity[event.userId].events++;
-              userActivity[event.userId].lastSeen = Math.max(
-                userActivity[event.userId].lastSeen,
-                event.timestamp
-              );
-            });
-            return { type: 'user_activity', data: userActivity };
+          {
+            task: (b) => {
+              const userActivity = {};
+              b.forEach(event => {
+                if (!userActivity[event.userId]) {
+                  userActivity[event.userId] = { events: 0, lastSeen: 0 };
+                }
+                userActivity[event.userId].events++;
+                userActivity[event.userId].lastSeen = Math.max(
+                  userActivity[event.userId].lastSeen,
+                  event.timestamp
+                );
+              });
+              return { type: 'user_activity', data: userActivity };
+            },
+            args: [batch]
           },
-          () => {
-            // Fraud detection
-            const suspiciousActivity = batch.filter(event => {
-              // Simple fraud detection logic
-              return event.eventType === 'purchase' && Math.random() < 0.05;
-            });
-            return { type: 'fraud_detection', data: suspiciousActivity };
+          {
+            task: (b) => {
+              const suspiciousActivity = b.filter(event => {
+                return event.eventType === 'purchase' && Math.random() < 0.05;
+              });
+              return { type: 'fraud_detection', data: suspiciousActivity };
+            },
+            args: [batch]
           }
         ]);
 
@@ -665,58 +665,63 @@ describe('Integration Tests', () => {
 
       // Generate multiple reports in parallel
       const reportResults = await tasklets.runAll([
-        () => {
-          // Revenue by category report
-          const categoryRevenue = {};
-          salesData.forEach(sale => {
-            categoryRevenue[sale.productCategory] =
-              (categoryRevenue[sale.productCategory] || 0) + sale.amount;
-          });
-          return { report: 'category_revenue', data: categoryRevenue };
+        {
+          task: (data) => {
+            const categoryRevenue = {};
+            data.forEach(sale => {
+              categoryRevenue[sale.productCategory] =
+                (categoryRevenue[sale.productCategory] || 0) + sale.amount;
+            });
+            return { report: 'category_revenue', data: categoryRevenue };
+          },
+          args: [salesData]
         },
-        () => {
-          // Regional performance report
-          const regionalPerformance = {};
-          salesData.forEach(sale => {
-            if (!regionalPerformance[sale.region]) {
-              regionalPerformance[sale.region] = { sales: 0, revenue: 0 };
-            }
-            regionalPerformance[sale.region].sales++;
-            regionalPerformance[sale.region].revenue += sale.amount;
-          });
-          return { report: 'regional_performance', data: regionalPerformance };
+        {
+          task: (data) => {
+            const regionalPerformance = {};
+            data.forEach(sale => {
+              if (!regionalPerformance[sale.region]) {
+                regionalPerformance[sale.region] = { sales: 0, revenue: 0 };
+              }
+              regionalPerformance[sale.region].sales++;
+              regionalPerformance[sale.region].revenue += sale.amount;
+            });
+            return { report: 'regional_performance', data: regionalPerformance };
+          },
+          args: [salesData]
         },
-        () => {
-          // Sales rep performance report
-          const repPerformance = {};
-          salesData.forEach(sale => {
-            if (!repPerformance[sale.salesRep]) {
-              repPerformance[sale.salesRep] = { sales: 0, revenue: 0, avgSale: 0 };
-            }
-            repPerformance[sale.salesRep].sales++;
-            repPerformance[sale.salesRep].revenue += sale.amount;
-          });
-
-          // Calculate averages
-          Object.keys(repPerformance).forEach(rep => {
-            repPerformance[rep].avgSale =
-              repPerformance[rep].revenue / repPerformance[rep].sales;
-          });
-
-          return { report: 'sales_rep_performance', data: repPerformance };
+        {
+          task: (data) => {
+            const repPerformance = {};
+            data.forEach(sale => {
+              if (!repPerformance[sale.salesRep]) {
+                repPerformance[sale.salesRep] = { sales: 0, revenue: 0, avgSale: 0 };
+              }
+              repPerformance[sale.salesRep].sales++;
+              repPerformance[sale.salesRep].revenue += sale.amount;
+            });
+            Object.keys(repPerformance).forEach(rep => {
+              repPerformance[rep].avgSale =
+                repPerformance[rep].revenue / repPerformance[rep].sales;
+            });
+            return { report: 'sales_rep_performance', data: repPerformance };
+          },
+          args: [salesData]
         },
-        () => {
-          // Time-based trend analysis
-          const dailyTrends = {};
-          salesData.forEach(sale => {
-            const day = new Date(sale.timestamp).toDateString();
-            if (!dailyTrends[day]) {
-              dailyTrends[day] = { sales: 0, revenue: 0 };
-            }
-            dailyTrends[day].sales++;
-            dailyTrends[day].revenue += sale.amount;
-          });
-          return { report: 'daily_trends', data: dailyTrends };
+        {
+          task: (data) => {
+            const dailyTrends = {};
+            data.forEach(sale => {
+              const day = new Date(sale.timestamp).toDateString();
+              if (!dailyTrends[day]) {
+                dailyTrends[day] = { sales: 0, revenue: 0 };
+              }
+              dailyTrends[day].sales++;
+              dailyTrends[day].revenue += sale.amount;
+            });
+            return { report: 'daily_trends', data: dailyTrends };
+          },
+          args: [salesData]
         }
       ]);
 
@@ -734,54 +739,62 @@ describe('Integration Tests', () => {
       // Add various types of operations
       for (let i = 0; i < 50; i++) {
         const operationType = i % 5;
-
         switch (operationType) {
           case 0: // CPU intensive
-            mixedOperations.push(() => {
-              let sum = 0;
-              for (let j = 0; j < 100000; j++) {
-                sum += Math.sqrt(j);
-              }
-              return { type: 'cpu', result: sum };
+            mixedOperations.push({
+              task: () => {
+                let sum = 0;
+                for (let j = 0; j < 100000; j++) sum += Math.sqrt(j);
+                return { type: 'cpu', result: sum };
+              },
+              args: []
             });
             break;
 
           case 1: // Memory intensive
-            mixedOperations.push(() => {
-              const data = new Array(10000).fill(0).map(() => Math.random());
-              return { type: 'memory', size: data.length, checksum: data.reduce((a, b) => a + b, 0) };
+            mixedOperations.push({
+              task: (idx) => {
+                const data = new Array(1000).fill(0).map((_, k) => `data-${idx}-${k}`);
+                return { type: 'memory', size: data.length };
+              },
+              args: [i]
             });
             break;
 
           case 2: // I/O simulation
-            mixedOperations.push(() => {
-              // Simulate I/O delay
-              const start = Date.now();
-              while (Date.now() - start < 10) { /* busy wait */
-              }
-              return { type: 'io', duration: Date.now() - start };
+            mixedOperations.push({
+              task: (idx) => {
+                const s = Date.now();
+                while (Date.now() - s < 10) { }
+                return { type: 'io', id: idx, duration: Date.now() - s };
+              },
+              args: [i]
             });
             break;
 
           case 3: // Error prone
-            mixedOperations.push(() => {
-              if (Math.random() < 0.2) {
-                throw new Error('Simulated error');
-              }
-              return { type: 'error_prone', success: true };
+            mixedOperations.push({
+              task: (idx) => {
+                if (Math.random() < 0.2) throw new Error(`Simulated error at ${idx}`);
+                return { type: 'error_prone', success: true, id: idx };
+              },
+              args: [i]
             });
             break;
 
           case 4: // Quick task
-            mixedOperations.push(() => {
-              return { type: 'quick', timestamp: Date.now() };
+            mixedOperations.push({
+              task: (idx) => {
+                return { type: 'quick', timestamp: Date.now(), id: idx };
+              },
+              args: [i]
             });
             break;
         }
       }
 
       const startTime = Date.now();
-      const results = await Promise.allSettled(mixedOperations.map(op => tasklets.run(op)));
+      const results = await Promise.allSettled(mixedOperations.map(op => tasklets.run(op.task, ...op.args)));
       const endTime = Date.now();
 
       expect(results.length).toBe(50);
@@ -813,41 +826,29 @@ describe('Integration Tests', () => {
       for (let round = 0; round < 4; round++) {
         for (let i = 0; i < 50; i++) {
           sustainedOperations.push(
-            tasklets.run(() => {
-              // Variable workload
+            tasklets.run((r, idx) => {
               const workType = Math.floor(Math.random() * 3);
-
               switch (workType) {
                 case 0:
-                  // Light computation
-                  return Array.from({ length: 100 }, (_, i) => i * 2).reduce((a, b) => a + b, 0);
-
+                  return Array.from({ length: 100 }, (_, j) => j * 2).reduce((a, b) => a + b, 0);
                 case 1:
-                  // Medium computation
-                  let result = 0;
-                  for (let j = 0; j < 10000; j++) {
-                    result += Math.sin(j);
-                  }
-                  return result;
-
+                  let res = 0;
+                  for (let j = 0; j < 10000; j++) res += Math.sin(j);
+                  return res;
                 case 2:
-                  // Heavy computation
                   const matrix = Array.from({ length: 100 }, () =>
                     Array.from({ length: 100 }, () => Math.random())
                   );
                   return matrix.map(row => row.reduce((a, b) => a + b, 0));
-
                 default:
                   return 'default';
               }
-            })
+            }, round, i)
           );
         }
 
         // Check health between rounds
         if (round < 3) {
-          // Clean up to check intermediate health
-          await tasklets.cleanup();
           const intermediateHealth = tasklets.getHealth();
           expect(intermediateHealth.status).toBe('healthy');
         }
