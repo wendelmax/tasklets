@@ -29,7 +29,7 @@ jobs:
         run: npm ci
         
       - name: Run Tests
-        run: npm test -- --forceExit
+        run: npm test
         
       - name: Run Examples (Verification)
         run: node docs/examples/basics/01-hello-parallel.js

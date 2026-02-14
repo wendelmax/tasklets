@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
       
       - run: npm ci
-      - run: npm test -- --forceExit
+      - run: npm test
       
       - run: npm publish --access public
         env:
