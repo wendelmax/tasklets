@@ -88,6 +88,16 @@ describe('Configuration Management Tests', () => {
       expect(stats.config.maxMemory).toBe(80);
     });
 
+    test('should throw error for invalid maxMemory range', () => {
+      expect(() => {
+        tasklets.configure({ maxMemory: -1 });
+      }).toThrow('maxMemory must be between 0 and 100');
+
+      expect(() => {
+        tasklets.configure({ maxMemory: 101 });
+      }).toThrow('maxMemory must be between 0 and 100');
+    });
+
     test('should handle multiple configuration options', () => {
       const config = {
         maxWorkers: 2,
