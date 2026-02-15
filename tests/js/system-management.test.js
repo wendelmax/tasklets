@@ -6,9 +6,9 @@ describe('System Management Tests', () => {
 
   beforeEach(() => {
     tasklets = new Tasklets({
-      workers: 2,
+      maxWorkers: 2,
       timeout: 10000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 
@@ -135,9 +135,9 @@ describe('System Management Tests', () => {
     test('should handle shutdown with different worker configurations', async () => {
       const configs = [1, 2, 4, 8];
 
-      for (const workers of configs) {
+      for (const maxWorkers of configs) {
         // Create a new instance for each config to avoid state pollution
-        const t = new Tasklets({ workers });
+        const t = new Tasklets({ maxWorkers });
 
         // Run a task
         await t.run(() => 'config test');
@@ -195,7 +195,7 @@ describe('System Management Tests', () => {
 
     test('should handle configuration through native module', () => {
       // Configuration should work
-      expect(() => tasklets.configure({ workers: 2 })).not.toThrow();
+      expect(() => tasklets.configure({ maxWorkers: 2 })).not.toThrow();
       expect(() => tasklets.configure({ timeout: 5000 })).not.toThrow();
       expect(() => tasklets.configure({ logging: 'debug' })).not.toThrow();
     });
@@ -205,7 +205,8 @@ describe('System Management Tests', () => {
       const stats = tasklets.getStats();
       expect(stats).toBeDefined();
       expect(typeof stats).toBe('object');
-      expect(stats).toHaveProperty('workers');
+      expect(stats).toHaveProperty('config');
+      expect(stats.config).toHaveProperty('maxWorkers');
       expect(stats).toHaveProperty('activeTasks');
       expect(stats).toHaveProperty('throughput');
       expect(stats).toHaveProperty('config');
@@ -222,17 +223,15 @@ describe('System Management Tests', () => {
     });
 
     test('should handle worker thread configuration', () => {
-      const originalStats = tasklets.getStats();
-
       // Configure workers
-      tasklets.configure({ workers: 4 });
+      tasklets.configure({ maxWorkers: 4 });
 
       const newStats = tasklets.getStats();
-      expect(newStats.workers).toBe(4);
+      expect(newStats.config.maxWorkers).toBe(4);
     });
 
     test('should handle logging level configuration', () => {
-      const levels = ['off', 'error', 'warn', 'info', 'debug', 'trace'];
+      const levels = ['none', 'error', 'warn', 'info', 'debug'];
 
       levels.forEach(level => {
         expect(() => tasklets.configure({ logging: level })).not.toThrow();
@@ -243,12 +242,12 @@ describe('System Management Tests', () => {
     });
 
     test('should handle auto worker detection', () => {
-      tasklets.configure({ workers: 'auto' });
+      tasklets.configure({ maxWorkers: 'auto' });
 
       const stats = tasklets.getStats();
       const cpuCount = require('os').cpus().length;
 
-      expect(stats.workers).toBe(cpuCount);
+      expect(stats.config.maxWorkers).toBe(cpuCount);
     });
 
     test('should handle native module error conditions gracefully', () => {
@@ -485,13 +484,13 @@ describe('System Management Tests', () => {
 
     test('should handle worker thread lifecycle', async () => {
       const workerConfigs = [1, 2, 4];
-      for (const workers of workerConfigs) {
-        tasklets.configure({ workers });
+      for (const maxWorkers of workerConfigs) {
+        tasklets.configure({ maxWorkers });
         // Run a ping task to ensure workers are spawned (lazy spawning)
         await tasklets.run(() => 'pong');
 
         const stats = tasklets.getStats();
-        expect(stats.workers).toBe(workers);
+        expect(stats.config.maxWorkers).toBe(maxWorkers);
 
         const health = tasklets.getHealth();
         expect(health.workers).toBeGreaterThanOrEqual(1);
@@ -526,7 +525,7 @@ describe('System Management Tests', () => {
         } else if (i % 4 === 2) {
           concurrentOperations.push(Promise.resolve(tasklets.getHealth()));
         } else {
-          concurrentOperations.push(Promise.resolve(tasklets.configure({ workers: 2 + (i % 4) })));
+          concurrentOperations.push(Promise.resolve(tasklets.configure({ maxWorkers: 2 + (i % 4) })));
         }
       }
 
@@ -544,7 +543,7 @@ describe('System Management Tests', () => {
       // Multiple concurrent configuration changes
       for (let i = 0; i < 10; i++) {
         configPromises.push(Promise.resolve(tasklets.configure({
-          workers: 2 + (i % 4),
+          maxWorkers: 2 + (i % 4),
           timeout: 1000 + (i * 1000),
           logging: i % 2 === 0 ? 'info' : 'debug'
         })));
@@ -580,7 +579,7 @@ describe('System Management Tests', () => {
           expect(result).toBe(`thread-safe-${index}`);
         } else {
           expect(typeof result).toBe('object');
-          expect(result.workers).toBeDefined();
+          expect(result.config.maxWorkers).toBeDefined();
         }
       });
     });
@@ -616,7 +615,7 @@ describe('System Management Tests', () => {
       const finalStats = tasklets.getStats();
 
       // Worker count should remain consistent
-      expect(finalStats.workers).toBe(initialStats.workers);
+      expect(finalStats.config.maxWorkers).toBe(initialStats.config.maxWorkers);
       const health = tasklets.getHealth();
       expect(health.status).toBe('healthy');
     });
@@ -641,7 +640,7 @@ describe('System Management Tests', () => {
       const systemCpus = require('os').cpus().length;
 
       // Test with more workers than CPUs
-      tasklets.configure({ workers: systemCpus * 2 });
+      tasklets.configure({ maxWorkers: systemCpus * 2 });
 
       const result = await tasklets.run(() => 'oversubscribed');
       expect(result).toBe('oversubscribed');
@@ -661,7 +660,7 @@ describe('System Management Tests', () => {
           process.env.NODE_ENV = env;
 
           // Configuration should work in any environment
-          expect(() => tasklets.configure({ workers: 2 })).not.toThrow();
+          expect(() => tasklets.configure({ maxWorkers: 2 })).not.toThrow();
 
           const stats = tasklets.getStats();
           expect(stats).toBeDefined();
@@ -674,7 +673,7 @@ describe('System Management Tests', () => {
 
     test('should handle graceful degradation', async () => {
       // Test with minimal resources
-      tasklets.configure({ workers: 1, timeout: 1000 });
+      tasklets.configure({ maxWorkers: 1, timeout: 1000 });
 
       const result = await tasklets.run(() => 'minimal');
       expect(result).toBe('minimal');
