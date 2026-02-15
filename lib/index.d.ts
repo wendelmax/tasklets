@@ -18,7 +18,6 @@ export interface TaskletStats {
   idleWorkers: number;
   throughput: number;
   avgTaskTime: number;
-  workers: number;
   config: TaskletsConfig;
 }
 
@@ -45,7 +44,10 @@ export declare class Tasklets {
   static run<T = any>(task: ((...args: any[]) => T | Promise<T>) | string, ...args: any[]): Promise<T>;
   static runAll<T = any>(tasks: Array<any>): Promise<Array<T>>;
   static batch<T = any>(tasks: Array<any>, options?: any): Promise<Array<T>>;
+  static retry<T = any>(task: any, options?: any): Promise<T>;
   static configure(config: TaskletsConfig): void;
+  static enableAdaptiveMode(): void;
+  static setWorkloadType(type: 'cpu' | 'io' | 'mixed'): void;
   static getStats(): TaskletStats;
   static getHealth(): any;
   static terminate(): Promise<void>;

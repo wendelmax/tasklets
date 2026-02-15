@@ -24,7 +24,7 @@ describe('Performance Monitoring Tests', () => {
 
       expect(stats).toBeDefined();
       expect(typeof stats).toBe('object');
-      expect(stats).toHaveProperty('workers');
+      expect(stats).toHaveProperty('totalWorkers');
       expect(stats).toHaveProperty('activeTasks');
       expect(stats).toHaveProperty('throughput');
       expect(stats).toHaveProperty('totalTasks');

@@ -554,7 +554,7 @@ describe('System Management Tests', () => {
       // Should not cause errors
       const stats = tasklets.getStats();
       expect(stats).toBeDefined();
-      expect(stats.workers).toBeGreaterThan(0);
+      expect(stats.config.maxWorkers).toBeGreaterThan(0);
     });
 
     test('should handle concurrent task execution and stats access', async () => {

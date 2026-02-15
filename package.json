@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "test": "jest --forceExit",
-    "test:typescript": "ts-node test-typescript.ts",
+    "test:typescript": "ts-node tests/js/test-typescript.ts",
     "test:all": "npm test && npm run test:typescript",
     "example": "node docs/examples/basics/01-hello-parallel.js",
     "prepublishOnly": "npm run test"

@@ -81,6 +81,11 @@ tasklets.configure({
 
 For full documentation of all options, `MODULE:` prefix usage, and argument validation, see [Configuration Guide](docs/configuration.md).
 
+For advanced topics, see:
+- [Adaptive Scaling & Workload Optimization](docs/adaptive.md)
+- [Metrics & Health Monitoring](docs/metrics.md)
+- [Security & Module Allowlist](docs/configuration.md#security-module-allowlist)
+
 ### Batch Processing
 
 For processing arrays of data efficiently:
