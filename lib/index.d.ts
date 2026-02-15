@@ -7,6 +7,7 @@ export interface TaskletsConfig {
   workload?: 'cpu' | 'io' | 'mixed';    // Optimizes scheduler for workload type
   adaptive?: boolean;                    // Enable adaptive mode for auto-scaling
   maxMemory?: number;                    // Max memory usage in % (0-100). Safety limit (1 worker) at 5% free RAM.
+  allowedModules?: string[];             // Optional allowlist for paths allowed in MODULE: prefix
 }
 
 export interface TaskletStats {
