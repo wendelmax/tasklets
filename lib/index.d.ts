@@ -1,12 +1,12 @@
 export interface TaskletsConfig {
-  workers?: number | 'auto';     // Number of workers or 'auto'
-  maxWorkers?: number;           // Alias for workers
-  minWorkers?: number;           // Minimum workers to keep alive
+  maxWorkers?: number | 'auto';          // Number of worker threads (or 'auto' for CPU count)
+  minWorkers?: number;                   // Minimum workers to keep alive
   idleTimeout?: number;          // Time in ms before killing idle workers
   timeout?: number;              // Global task timeout
   logging?: 'debug' | 'info' | 'warn' | 'error' | 'none';
-  workload?: 'cpu' | 'io' | 'mixed';
-  maxMemory?: number;            // Max memory in MB
+  workload?: 'cpu' | 'io' | 'mixed';    // Optimizes scheduler for workload type
+  adaptive?: boolean;                    // Enable adaptive mode for auto-scaling
+  maxMemory?: number;                    // Max memory usage in % (0-100). Safety limit (1 worker) at 5% free RAM.
 }
 
 export interface TaskletStats {

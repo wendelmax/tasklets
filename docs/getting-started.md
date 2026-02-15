@@ -87,10 +87,21 @@ const [res1, res2] = await tasklets.runAll([
 Tasklets works out of the box, but you can customize the worker pool.
 
 ```javascript
-// Initialize with specific settings
 const Tasklets = require('@wendelmax/tasklets');
-const tasklets = new Tasklets({ maxWorkers: 8 });
+const tasklets = new Tasklets();
+
+tasklets.configure({
+    maxWorkers: 8,       // Max worker threads (or 'auto')
+    minWorkers: 4,       // Warm pool size
+    workload: 'io',      // 'cpu' | 'io' | 'mixed'
+    adaptive: true,      // Auto-scale based on load
+    timeout: 10000,      // Reject tasks after 10s
+    maxMemory: 80,       // Block new workers above 80% RAM
+    logging: 'warn',     // 'debug' | 'info' | 'warn' | 'error' | 'none'
+});
 ```
+
+For full details on each option, see the [Configuration Guide](configuration.md).
 
 ---
 

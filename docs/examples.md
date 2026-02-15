@@ -93,4 +93,24 @@ setInterval(() => {
     console.log(`Active Tasks: ${stats.activeTasks}`);
     console.log(`Throughput: ${stats.throughput.toFixed(2)} ops/sec`);
 }, 5000);
+## 5. Configuration and v2.2 Features
+
+Tasklets v2.2 introduces several powerful configuration options.
+
+```javascript
+const tasklets = require('@wendelmax/tasklets');
+
+tasklets.configure({
+    maxWorkers: 4,      // Max threads
+    workload: 'io',     // Optimize for I/O tasks
+    adaptive: true,     // Auto-scale workers
+    timeout: 5000,      // Kill tasks after 5s
+    maxMemory: 80,      // Limit based on system RAM %
+    logging: 'debug'    // Internal debugging logs
+});
+
+// Using MODULE: prefix for CJS modules (needed for require() in workers)
+const result = await tasklets.run('MODULE:/path/to/worker.cjs', data);
 ```
+
+For a deep dive into these features, see the [Configuration Guide](configuration.md) and the [Full Configuration Example](examples/basics/03-configuration.js).

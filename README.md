@@ -69,12 +69,17 @@ You can tune the pool to fit your specific workload requirements.
 const tasklets = new Tasklets();
 
 tasklets.configure({
-    minWorkers: 4,         // Keep 4 workers ready (reduces cold start latency)
-    maxWorkers: 8,         // Limit to 8 workers
-    idleTimeout: 30000,    // Terminate workers after 30s of inactivity
-    workload: 'cpu'        // Optimizes scheduler for CPU-bound tasks
+    maxWorkers: 8,         // Number of worker threads (or 'auto' for CPU count)
+    minWorkers: 4,         // Keep 4 workers ready
+    workload: 'io',        // Optimize for I/O-bound tasks
+    adaptive: true,        // Auto-scale workers based on system load
+    timeout: 10000,        // Reject tasks that exceed 10s
+    maxMemory: 80,         // Block new workers above 80% system memory
+    logging: 'warn',       // Log level: 'debug' | 'info' | 'warn' | 'error' | 'none'
 });
 ```
+
+For full documentation of all options, `MODULE:` prefix usage, and argument validation, see [Configuration Guide](docs/configuration.md).
 
 ### Batch Processing
 
