@@ -6,9 +6,9 @@ describe('Performance Monitoring Tests', () => {
 
   beforeEach(() => {
     tasklets = new Tasklets({
-      workers: 2,
+      maxWorkers: 2,
       timeout: 10000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 
@@ -24,16 +24,18 @@ describe('Performance Monitoring Tests', () => {
 
       expect(stats).toBeDefined();
       expect(typeof stats).toBe('object');
-      expect(stats).toHaveProperty('workers');
+      expect(stats).toHaveProperty('totalWorkers');
       expect(stats).toHaveProperty('activeTasks');
       expect(stats).toHaveProperty('throughput');
+      expect(stats).toHaveProperty('totalTasks');
+      expect(stats).toHaveProperty('processedTasks');
       expect(stats).toHaveProperty('config');
     });
 
     test('should return numeric worker information', () => {
       const stats = tasklets.getStats();
-      expect(typeof stats.workers).toBe('number');
-      expect(stats.workers).toBeGreaterThan(0);
+      expect(typeof stats.config.maxWorkers).toBe('number');
+      expect(stats.config.maxWorkers).toBeGreaterThan(0);
     });
 
     test('should track throughput and average task time', async () => {
@@ -54,15 +56,15 @@ describe('Performance Monitoring Tests', () => {
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(4);
+      expect(stats.config.maxWorkers).toBe(4);
       expect(stats.config.timeout).toBe(15000);
     });
 
     test('should handle auto worker configuration', () => {
-      tasklets.configure({ workers: 'auto' });
+      tasklets.configure({ maxWorkers: 'auto' });
       const stats = tasklets.getStats();
       const cpuCount = os.cpus().length;
-      expect(stats.workers).toBe(cpuCount);
+      expect(stats.config.maxWorkers).toBe(cpuCount);
     });
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "@wendelmax/tasklets",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Modern high-performance tasklets for Node.js with Promise-based API, automatic error handling, and intuitive configuration",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "test": "jest --forceExit",
-    "test:typescript": "ts-node test-typescript.ts",
+    "test:typescript": "ts-node tests/js/test-typescript.ts",
     "test:all": "npm test && npm run test:typescript",
     "example": "node docs/examples/basics/01-hello-parallel.js",
     "prepublishOnly": "npm run test"

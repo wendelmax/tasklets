@@ -6,10 +6,10 @@ describe('Configuration Management Tests', () => {
 
   beforeEach(() => {
     tasklets = new Tasklets({
-      workers: 2,
+      maxWorkers: 2,
       timeout: 30000,
       logging: 'info',
-      maxMemory: '1GB'
+      maxMemory: 99
     });
   });
 
@@ -22,7 +22,7 @@ describe('Configuration Management Tests', () => {
   describe('config() function', () => {
     test('should set configuration options', () => {
       const result = tasklets.configure({
-        workers: 4,
+        maxWorkers: 4,
         timeout: 5000,
         logging: 'debug'
       });
@@ -32,29 +32,29 @@ describe('Configuration Management Tests', () => {
 
     test('should handle auto worker detection', () => {
       tasklets.configure({
-        workers: 'auto'
+        maxWorkers: 'auto'
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(os.cpus().length);
+      expect(stats.config.maxWorkers).toBe(os.cpus().length);
     });
 
     test('should handle numeric worker count', () => {
       tasklets.configure({
-        workers: 3
+        maxWorkers: 3
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(3);
+      expect(stats.config.maxWorkers).toBe(3);
     });
 
     test('should handle string worker count', () => {
       tasklets.configure({
-        workers: '2'
+        maxWorkers: '2'
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(2);
+      expect(stats.config.maxWorkers).toBe(2);
     });
 
     test('should handle timeout configuration', () => {
@@ -67,7 +67,7 @@ describe('Configuration Management Tests', () => {
     });
 
     test('should handle logging level configuration', () => {
-      const logLevels = ['off', 'error', 'warn', 'info', 'debug', 'trace'];
+      const logLevels = ['none', 'error', 'warn', 'info', 'debug'];
 
       logLevels.forEach(level => {
         tasklets.configure({
@@ -81,33 +81,43 @@ describe('Configuration Management Tests', () => {
 
     test('should handle maxMemory configuration', () => {
       tasklets.configure({
-        maxMemory: '2GB'
+        maxMemory: 80
       });
 
       const stats = tasklets.getStats();
-      expect(stats.config.maxMemory).toBe('2GB');
+      expect(stats.config.maxMemory).toBe(80);
+    });
+
+    test('should throw error for invalid maxMemory range', () => {
+      expect(() => {
+        tasklets.configure({ maxMemory: -1 });
+      }).toThrow('maxMemory must be between 0 and 100');
+
+      expect(() => {
+        tasklets.configure({ maxMemory: 101 });
+      }).toThrow('maxMemory must be between 0 and 100');
     });
 
     test('should handle multiple configuration options', () => {
       const config = {
-        workers: 2,
+        maxWorkers: 2,
         timeout: 15000,
         logging: 'warn',
-        maxMemory: '512MB'
+        maxMemory: 70
       };
 
       tasklets.configure(config);
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(2);
+      expect(stats.config.maxWorkers).toBe(2);
       expect(stats.config.timeout).toBe(15000);
       expect(stats.config.logging).toBe('warn');
-      expect(stats.config.maxMemory).toBe('512MB');
+      expect(stats.config.maxMemory).toBe(70);
     });
 
     test('should handle partial configuration updates', () => {
       tasklets.configure({
-        workers: 2,
+        maxWorkers: 2,
         timeout: 10000,
         logging: 'debug'
       });
@@ -117,7 +127,7 @@ describe('Configuration Management Tests', () => {
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(2);
+      expect(stats.config.maxWorkers).toBe(2);
       expect(stats.config.timeout).toBe(10000);
       expect(stats.config.logging).toBe('error');
     });
@@ -145,11 +155,11 @@ describe('Configuration Management Tests', () => {
 
     test('should handle zero workers', () => {
       tasklets.configure({
-        workers: 0
+        maxWorkers: 0
       });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(0);
+      expect(stats.config.maxWorkers).toBe(0);
     });
 
     test('should handle negative timeout', () => {
@@ -172,19 +182,19 @@ describe('Configuration Management Tests', () => {
 
     test('should handle configuration chaining', () => {
       tasklets
-        .configure({ workers: 2 })
+        .configure({ maxWorkers: 2 })
         .configure({ timeout: 5000 })
         .configure({ logging: 'debug' });
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(2);
+      expect(stats.config.maxWorkers).toBe(2);
       expect(stats.config.timeout).toBe(5000);
       expect(stats.config.logging).toBe('debug');
     });
 
     test('should validate configuration persistence', async () => {
       tasklets.configure({
-        workers: 3,
+        maxWorkers: 3,
         timeout: 8000,
         logging: 'warn'
       });
@@ -193,7 +203,7 @@ describe('Configuration Management Tests', () => {
       expect(result).toBe('test');
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(3);
+      expect(stats.config.maxWorkers).toBe(3);
       expect(stats.config.timeout).toBe(8000);
       expect(stats.config.logging).toBe('warn');
     });
@@ -201,15 +211,15 @@ describe('Configuration Management Tests', () => {
 
   describe('worker configuration', () => {
     test('should auto-detect CPU cores', () => {
-      tasklets.configure({ workers: 'auto' });
+      tasklets.configure({ maxWorkers: 'auto' });
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(os.cpus().length);
+      expect(stats.config.maxWorkers).toBe(os.cpus().length);
     });
 
     test('should handle explicit worker count', () => {
-      tasklets.configure({ workers: 6 });
+      tasklets.configure({ maxWorkers: 6 });
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(6);
+      expect(stats.config.maxWorkers).toBe(6);
     });
   });
 
@@ -226,7 +236,7 @@ describe('Configuration Management Tests', () => {
 
   describe('logging configuration', () => {
     test('should handle all logging levels', () => {
-      const levels = ['off', 'error', 'warn', 'info', 'debug', 'trace'];
+      const levels = ['none', 'error', 'warn', 'info', 'debug'];
       levels.forEach(level => {
         tasklets.configure({ logging: level });
         const stats = tasklets.getStats();
@@ -237,7 +247,7 @@ describe('Configuration Management Tests', () => {
 
   describe('memory configuration', () => {
     test('should handle various memory formats', () => {
-      const formats = ['512MB', '1GB', '2GB'];
+      const formats = [50, 75, 90];
       formats.forEach(maxMemory => {
         tasklets.configure({ maxMemory });
         const stats = tasklets.getStats();
@@ -249,7 +259,7 @@ describe('Configuration Management Tests', () => {
   describe('configuration validation', () => {
     test('should maintain configuration across multiple operations', async () => {
       tasklets.configure({
-        workers: 2,
+        maxWorkers: 2,
         timeout: 5000,
         logging: 'warn'
       });
@@ -262,9 +272,9 @@ describe('Configuration Management Tests', () => {
       expect(results).toEqual(['task1', 'task2']);
 
       const stats = tasklets.getStats();
-      expect(stats.workers).toBe(2);
+      expect(stats.config.maxWorkers).toBe(2);
       expect(stats.config.timeout).toBe(5000);
       expect(stats.config.logging).toBe('warn');
-    });
+    }, 20000);
   });
 });

@@ -8,7 +8,7 @@ describe('Error Handling Tests', () => {
     tasklets.configure({
       workers: 2,
       timeout: 5000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 

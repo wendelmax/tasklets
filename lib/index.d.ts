@@ -1,12 +1,13 @@
 export interface TaskletsConfig {
-  workers?: number | 'auto';     // Number of workers or 'auto'
-  maxWorkers?: number;           // Alias for workers
-  minWorkers?: number;           // Minimum workers to keep alive
+  maxWorkers?: number | 'auto';          // Number of worker threads (or 'auto' for CPU count)
+  minWorkers?: number;                   // Minimum workers to keep alive
   idleTimeout?: number;          // Time in ms before killing idle workers
   timeout?: number;              // Global task timeout
   logging?: 'debug' | 'info' | 'warn' | 'error' | 'none';
-  workload?: 'cpu' | 'io' | 'mixed';
-  maxMemory?: number;            // Max memory in MB
+  workload?: 'cpu' | 'io' | 'mixed';    // Optimizes scheduler for workload type
+  adaptive?: boolean;                    // Enable adaptive mode for auto-scaling
+  maxMemory?: number;                    // Max memory usage in % (0-100). Safety limit (1 worker) at 5% free RAM.
+  allowedModules?: string[];             // Optional allowlist for paths allowed in MODULE: prefix
 }
 
 export interface TaskletStats {
@@ -17,7 +18,6 @@ export interface TaskletStats {
   idleWorkers: number;
   throughput: number;
   avgTaskTime: number;
-  workers: number;
   config: TaskletsConfig;
 }
 
@@ -44,7 +44,10 @@ export declare class Tasklets {
   static run<T = any>(task: ((...args: any[]) => T | Promise<T>) | string, ...args: any[]): Promise<T>;
   static runAll<T = any>(tasks: Array<any>): Promise<Array<T>>;
   static batch<T = any>(tasks: Array<any>, options?: any): Promise<Array<T>>;
+  static retry<T = any>(task: any, options?: any): Promise<T>;
   static configure(config: TaskletsConfig): void;
+  static enableAdaptiveMode(): void;
+  static setWorkloadType(type: 'cpu' | 'io' | 'mixed'): void;
   static getStats(): TaskletStats;
   static getHealth(): any;
   static terminate(): Promise<void>;

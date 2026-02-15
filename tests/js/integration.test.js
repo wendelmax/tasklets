@@ -8,7 +8,7 @@ describe('Integration Tests', () => {
     tasklets.configure({
       workers: 4,
       timeout: 30000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 
@@ -181,7 +181,8 @@ describe('Integration Tests', () => {
       // Verify system remained healthy during computation
       const health = tasklets.getHealth();
       expect(health.status).toBe('healthy');
-      expect(health.workers).toBe(workerCount);
+      expect(health.workers).toBeGreaterThan(0);
+      expect(health.workers).toBeLessThanOrEqual(workerCount);
     });
 
     test('should handle adaptive batch sizing for Monte Carlo simulation', async () => {

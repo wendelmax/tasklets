@@ -9,7 +9,7 @@ console.log('--- Tasklets Basic Example ---\n');
 async function runBasicExamples() {
   // Configure (Optional)
   tasklets.configure({
-    workers: 4
+    maxWorkers: 4
   });
 
   // Example 1: Simple task execution

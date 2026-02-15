@@ -16,8 +16,9 @@ v2.0 is a complete rewrite in 100% native JavaScript using Worker Threads. It ma
 - **Simple API**: Run functions in parallel using standard `async/await`.
 - **Low Overhead**: Features a "Fast Path" optimization to bypass queuing when workers are available.
 - **Zero Dependencies**: Written in 100% native JavaScript. No C++ bindings or `node-gyp` required.
-- **Automatic Scaling**: Optionally configures the worker pool based on CPU availability and load.
-- **TypeScript Support**: Includes comprehensive type definitions.
+- **Adaptive Scaling**: Automatically adjusts the worker pool based on system load and memory pressure.
+- **Real-time Monitoring**: Built-in metrics for throughput, execution time, and system health.
+- **TypeScript Support**: Includes comprehensive type definitions for a better developer experience.
 
 ## Installation
 
@@ -69,12 +70,22 @@ You can tune the pool to fit your specific workload requirements.
 const tasklets = new Tasklets();
 
 tasklets.configure({
-    minWorkers: 4,         // Keep 4 workers ready (reduces cold start latency)
-    maxWorkers: 8,         // Limit to 8 workers
-    idleTimeout: 30000,    // Terminate workers after 30s of inactivity
-    workload: 'cpu'        // Optimizes scheduler for CPU-bound tasks
+    maxWorkers: 8,         // Number of worker threads (or 'auto' for CPU count)
+    minWorkers: 4,         // Keep 4 workers ready
+    workload: 'io',        // Optimize for I/O-bound tasks
+    adaptive: true,        // Auto-scale workers based on system load
+    timeout: 10000,        // Reject tasks that exceed 10s
+    maxMemory: 80,         // Block new workers above 80% system memory
+    logging: 'warn',       // Log level: 'debug' | 'info' | 'warn' | 'error' | 'none'
 });
 ```
+
+For full documentation of all options, `MODULE:` prefix usage, and argument validation, see [Configuration Guide](docs/configuration.md).
+
+For advanced topics, see:
+- [Adaptive Scaling & Workload Optimization](docs/adaptive.md)
+- [Metrics & Health Monitoring](docs/metrics.md)
+- [Security & Module Allowlist](docs/configuration.md#security-module-allowlist)
 
 ### Batch Processing
 
@@ -91,6 +102,23 @@ const results = await tasklets.batch(data.map(val => ({
 console.log(results); 
 // [{ result: 20, success: true }, { result: 40, success: true }, ...]
 ```
+
+### Monitoring & Health
+
+Track your application's performance in real-time:
+
+```javascript
+const stats = tasklets.getStats();
+console.log(`Throughput: ${stats.throughput} tasks/s`);
+console.log(`Avg Execution: ${stats.avgTaskTime}ms`);
+
+const health = tasklets.getHealth();
+if (health.status === 'pressured') {
+    console.warn('System under memory pressure!');
+}
+```
+
+For more details, see [Metrics & Health Monitoring](docs/metrics.md).
 
 ## Performance Note
 

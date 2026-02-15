@@ -7,7 +7,7 @@ describe('Core API Tests', () => {
     tasklets = new Tasklets({
       workers: 2,
       timeout: 5000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 
