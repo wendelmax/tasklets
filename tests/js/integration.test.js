@@ -8,7 +8,7 @@ describe('Integration Tests', () => {
     tasklets.configure({
       workers: 4,
       timeout: 30000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 

@@ -12,7 +12,7 @@ describe('Memory Management', () => {
     tasklets.configure({
       workers: 2,
       timeout: 5000,
-      logging: 'off'
+      logging: 'none'
     });
   });
 
