@@ -16,8 +16,13 @@ tasklets.configure({
     timeout: 10000,
     maxMemory: 80,
     logging: 'warn',
+    allowedModules: ['/usr/src/app/workers']
 });
 ```
+
+For advanced features, see:
+- [Adaptive Scaling](adaptive.md)
+- [Metrics & Monitoring](metrics.md)
 
 ## Options Reference
 
@@ -199,4 +204,41 @@ await tasklets.run(myTask, () => 'callback');
 
 // ✅ Pass plain data instead
 await tasklets.run(myTask, { key: 'value' }, [1, 2, 3]);
+```
+
+---
+
+### `allowedModules`
+- **Type:** `string[]`
+- **Default:** `null` (everything allowed)
+
+A security allowlist for the `MODULE:` prefix. If defined, any path used with `MODULE:` must start with one of the strings in this array.
+
+```javascript
+tasklets.configure({ 
+    allowedModules: [path.join(__dirname, 'workers')] 
+});
+
+// ✅ Allowed
+await tasklets.run(`MODULE:${path.join(__dirname, 'workers/db.js')}`);
+
+// ❌ Throws Security Error
+await tasklets.run(`MODULE:/etc/passwd`);
+```
+
+---
+
+## Static Proxy Methods
+
+For convenience, `Tasklets` exports static versions of its configuration and runner methods that operate on a **default singleton pool**.
+
+```javascript
+const Tasklets = require('@wendelmax/tasklets');
+
+// These are equivalent:
+Tasklets.configure({ maxWorkers: 4 });
+Tasklets.run(() => Math.random());
+Tasklets.enableAdaptiveMode();
+Tasklets.setWorkloadType('cpu');
+Tasklets.shutdown();
 ```

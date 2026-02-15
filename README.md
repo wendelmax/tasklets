@@ -16,8 +16,9 @@ v2.0 is a complete rewrite in 100% native JavaScript using Worker Threads. It ma
 - **Simple API**: Run functions in parallel using standard `async/await`.
 - **Low Overhead**: Features a "Fast Path" optimization to bypass queuing when workers are available.
 - **Zero Dependencies**: Written in 100% native JavaScript. No C++ bindings or `node-gyp` required.
-- **Automatic Scaling**: Optionally configures the worker pool based on CPU availability and load.
-- **TypeScript Support**: Includes comprehensive type definitions.
+- **Adaptive Scaling**: Automatically adjusts the worker pool based on system load and memory pressure.
+- **Real-time Monitoring**: Built-in metrics for throughput, execution time, and system health.
+- **TypeScript Support**: Includes comprehensive type definitions for a better developer experience.
 
 ## Installation
 
@@ -101,6 +102,23 @@ const results = await tasklets.batch(data.map(val => ({
 console.log(results); 
 // [{ result: 20, success: true }, { result: 40, success: true }, ...]
 ```
+
+### Monitoring & Health
+
+Track your application's performance in real-time:
+
+```javascript
+const stats = tasklets.getStats();
+console.log(`Throughput: ${stats.throughput} tasks/s`);
+console.log(`Avg Execution: ${stats.avgTaskTime}ms`);
+
+const health = tasklets.getHealth();
+if (health.status === 'pressured') {
+    console.warn('System under memory pressure!');
+}
+```
+
+For more details, see [Metrics & Health Monitoring](docs/metrics.md).
 
 ## Performance Note
 
