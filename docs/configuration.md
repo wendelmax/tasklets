@@ -208,6 +208,77 @@ await tasklets.run(myTask, { key: 'value' }, [1, 2, 3]);
 
 ---
 
+## Passing Class Instances (Beans / Services)
+
+Worker threads run in a completely isolated V8 context. Arguments are transferred via the [Structured Clone Algorithm](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm), which copies **only plain data** — class methods, prototype chains, getters, and non-serializable handles (like database connections) are **not** preserved.
+
+```javascript
+class UserService {
+    constructor(db) { this.db = db; }
+    getUser(id) { return this.db.query('SELECT * FROM users WHERE id = ?', [id]); }
+}
+
+const svc = new UserService(db);
+
+// ❌ svc is cloned as a plain object – methods are lost inside the worker
+await tasklets.run((service) => {
+    service.getUser(1); // TypeError: service.getUser is not a function
+}, svc);
+```
+
+### Workaround 1 — Pass only plain data
+
+Extract the serializable data your task actually needs and pass it as plain arguments:
+
+```javascript
+// ✅ Pass only what the worker needs as plain values
+await tasklets.run((userId) => {
+    // self-contained CPU work on the id
+    return userId * 2;
+}, userId);
+```
+
+### Workaround 2 — Use the `MODULE:` prefix
+
+When a task truly needs a service (database, file system, external API), create a dedicated worker module. The module is `require()`-d fresh inside the worker, so it can instantiate its own connections and services:
+
+```javascript
+// workers/user-worker.cjs
+const { Client } = require('pg');
+
+module.exports = async function(userId) {
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    const { rows } = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+    await client.end();
+    return rows[0];
+};
+```
+
+```javascript
+// main.js
+const path = require('path');
+
+const result = await tasklets.run(
+    `MODULE:${path.resolve('./workers/user-worker.cjs')}`,
+    userId
+);
+console.log('User:', result);
+```
+
+> **Why does this work?** The worker module is loaded with `require()` inside the worker thread, giving it access to the full Node.js module system, environment variables, and the ability to create its own connection pools or service instances.
+
+### Summary
+
+| Scenario | Recommended Approach |
+|---|---|
+| Pure CPU work (math, parsing) | Inline function with plain arguments |
+| Needs `require()` / external packages | `MODULE:` prefix |
+| Needs a database / service connection | `MODULE:` prefix (instantiate inside worker) |
+| Class instance with only data properties | Pass as a plain object `{ ...bean }` |
+
+---
+
 ### `allowedModules`
 - **Type:** `string[]`
 - **Default:** `null` (everything allowed)

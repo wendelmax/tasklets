@@ -86,6 +86,8 @@ For advanced topics, see:
 - [Adaptive Scaling & Workload Optimization](docs/adaptive.md)
 - [Metrics & Health Monitoring](docs/metrics.md)
 - [Security & Module Allowlist](docs/configuration.md#security-module-allowlist)
+- [Passing Class Instances / Beans to Workers](docs/configuration.md#passing-class-instances-beans--services)
+- [Benchmarks](docs/benchmarks.md)
 
 ### Batch Processing
 
@@ -123,6 +125,8 @@ For more details, see [Metrics & Health Monitoring](docs/metrics.md).
 ## Performance Note
 
 Tasklets is designed to be as close to "bare metal" as possible. When a worker is free, tasks are dispatched immediately without entering a queue, resulting in minimal latency overhead.
+
+For benchmarks and real-world comparisons, see [docs/benchmarks.md](docs/benchmarks.md).
 
 ## License
 
