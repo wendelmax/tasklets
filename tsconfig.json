@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "commonjs",
-    "lib": ["ES2020"],
+    "lib": ["ES2022"],
     "declaration": true,
     "outDir": "./lib",
     "rootDir": "./lib",
@@ -13,8 +13,6 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "noEmit": false
   },
   "include": [
@@ -29,4 +27,4 @@
     "benchmarks",
     "scripts"
   ]
-} 
+}

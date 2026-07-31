@@ -1,5 +1,6 @@
 export interface TaskletsConfig {
   maxWorkers?: number | 'auto';          // Number of worker threads (or 'auto' for CPU count)
+  workers?: number;                      // Alias for maxWorkers (deprecated, use maxWorkers)
   minWorkers?: number;                   // Minimum workers to keep alive
   idleTimeout?: number;          // Time in ms before killing idle workers
   timeout?: number;              // Global task timeout
@@ -18,6 +19,8 @@ export interface TaskletStats {
   idleWorkers: number;
   throughput: number;
   avgTaskTime: number;
+  totalTasks: number;
+  processedTasks: number;
   config: TaskletsConfig;
 }
 
