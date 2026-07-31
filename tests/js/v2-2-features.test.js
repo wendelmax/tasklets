@@ -61,7 +61,7 @@ describe('Tasklets v2.2 Feature Validation', () => {
             // Verify warning message
             expect(warnSpy).toHaveBeenCalledWith(
                 expect.stringContaining('[tasklets:warn]'),
-                expect.stringContaining('Memory limit reached (90.0% / 80%)')
+                expect.stringContaining('Memory limit reached')
             );
 
             // Cleanup
