@@ -14,6 +14,7 @@ The `benches/` directory contains ready-to-run benchmark scripts.
 | `benches/crypto-hash.js` | Throughput for a CPU-bound hashing workload: blocking main thread vs. offloading to a worker |
 | `benches/optimization-benchmark.js` | End-to-end throughput when dispatching 1,000 tasks via `runAll()` |
 | `benches/scaling-test.js` | Worker-pool scaling behaviour: burst spawning and idle-timeout scale-down |
+| `benches/sync-io-comparison.js` | Sync I/O offloading: `fs.readFileSync` on the main thread vs. offloaded to a worker via the `MODULE:` prefix |
 
 ### Running the benchmarks
 
@@ -32,6 +33,9 @@ node benches/optimization-benchmark.js
 
 # Worker-pool scaling behaviour (takes ~8 s)
 node benches/scaling-test.js
+
+# Sync I/O: main thread vs. offloaded via Tasklets
+node benches/sync-io-comparison.js
 ```
 
 ---
