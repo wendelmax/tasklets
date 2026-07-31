@@ -21,10 +21,15 @@
   },
   "keywords": [
     "tasklets",
-    "worker_threads",
-    "parallel",
+    "worker-threads",
+    "thread-pool",
+    "parallelism",
+    "multithreading",
     "concurrency",
-    "async"
+    "cpu-intensive",
+    "main-thread-offload",
+    "zero-dependency",
+    "promise"
   ],
   "author": "Jackson Wendel Santos Sá",
   "license": "MIT",
