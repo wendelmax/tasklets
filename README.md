@@ -311,25 +311,33 @@ For three-way comparisons (blocking vs raw workers vs Tasklets), see:
 
 ## Architecture
 
+The `Tasklets` pool runs on your main thread. Workers are plain Node.js `Worker` threads.
+
 ```
-main thread                    worker thread
-┌─────────────────┐           ┌──────────────────┐
-│  Tasklets pool  │  postMessage(task, args)    │
-│  ┌───────────┐  │ ──────────→  │  authenticate │
-│  │ idleWorkers│  │           │  deserialize   │
-│  │ (Set)      │  │           │  execute fn    │
-│  │ workerMap  │  │ ←──────────  postMessage   │
-│  │ (WeakMap)  │  │  { result/error, taskId }  │
-│  │ fnCache    │  │           └──────────────────┘
-│  │ queue      │  │
-│  │ metrics    │  │
-│  └───────────┘  │
-└─────────────────┘
+run(fn, args)
+  │
+  ├─ idle worker ready? ──Yes──→  authenticate
+  │   (Set lookup, O(1))           deserialize
+  │                                execute fn
+  │   ←───────────────────────     postMessage(result)
+  │
+  └─ all busy? ──Yes──→ enqueue
+      (ring buffer, O(1))          dispatch when worker frees
 ```
 
-- **Fast Path**: idle worker available → dispatch immediately
-- **Slow Path**: all workers busy → enqueue, dispatch when one frees
-- **Secret auth**: every instance generates a 32-byte hex token; workers validate every message
+**Data structures** on the main thread:
+
+| Structure | Type | Purpose |
+|-----------|------|---------|
+| `idleWorkers` | `Set` | O(1) idle worker lookup |
+| `workerMap` | `WeakMap` | Resolves worker by thread reference |
+| `fnCache` | `WeakMap` | Caches `toString()` for reused functions |
+| `taskQueue` | array + offset | Ring-buffer (no `shift()` reindexing) |
+| `activeTasks` | `Map` | In-flight task tracking |
+
+- **Fast Path**: dispatch immediately when a worker is idle (no queuing)
+- **Slow Path**: enqueue when all workers busy, dispatch as soon as one frees up
+- **Secret auth**: each pool generates a random 32-byte hex token; workers validate every message
 
 ---
 
