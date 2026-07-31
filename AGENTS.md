@@ -32,12 +32,12 @@ No lint, no format, no typecheck configured.
 
 ## CI & Release
 
-- **CI** (`.github/workflows/ci.yml`): 3 OS × Node 18/20/22/23, `npm ci` → `npm test` → run hello-parallel example as smoke test. No build step.
+- **CI** (`.github/workflows/ci.yml`): 3 OS × Node 22/24/26, `npm ci` → `npm test` → run hello-parallel example as smoke test. No build step.
 - **Release** (`.github/workflows/release.yml`): manual `workflow_dispatch` or GitHub Release publication → `npm publish --access public`. Requires `secrets.NPM_TOKEN`.
 
 ## Key constraints
 
-- Node `>=18.0.0`
+- Node `>=22.0.0`
 - No runtime dependencies (dev-only: jest, ts-node, typescript, benchmark)
 - Worker tasks are stringified functions deserialized via `new Function()` — must be self-contained (closures do not cross the thread boundary)
 - BigInt and Symbol return values are explicitly rejected (throws before serialization)
