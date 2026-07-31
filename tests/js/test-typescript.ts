@@ -17,7 +17,7 @@ import type {
 } from '../../lib/index';
 
 // Test basic imports and types
-console.log('✅ TypeScript imports working correctly');
+console.log('TypeScript imports working correctly');
 
 // Test configuration types
 const config: TaskletsConfig = {
@@ -29,17 +29,17 @@ const config: TaskletsConfig = {
 
 // Test API methods with proper typing
 async function testTypeScriptAPI() {
-  console.log('🧪 Testing TypeScript API compatibility...');
+  console.log('Testing TypeScript API compatibility...');
 
   // Test configuration
   tasklets.configure(config);
-  console.log('✅ Configuration working');
+  console.log('Configuration working');
 
   // Test basic task execution
   const result = await tasklets.run(() => {
     return 'TypeScript task completed';
   }, { timeout: 5000 });
-  console.log('✅ Basic task execution:', result);
+  console.log('Basic task execution:', result);
 
   // Test runAll with proper typing
   const results = await tasklets.runAll([
@@ -47,7 +47,7 @@ async function testTypeScriptAPI() {
     () => 'Task 2',
     () => 'Task 3'
   ]);
-  console.log('✅ runAll working:', results);
+  console.log('runAll working:', results);
 
   // Test batch processing
   const batchResults = await tasklets.batch([
@@ -57,24 +57,24 @@ async function testTypeScriptAPI() {
       console.log(`Progress: ${progress.percentage}%`);
     }
   });
-  console.log('✅ Batch processing working:', batchResults);
+  console.log('Batch processing working:', batchResults);
 
   // Test retry functionality
   const retryResult = await tasklets.retry(() => {
     return 'Retry task completed';
   }, { attempts: 3, delay: 1000 });
-  console.log('✅ Retry functionality working:', retryResult);
+  console.log('Retry functionality working:', retryResult);
 
   // Test statistics
   const stats: TaskletStats = tasklets.getStats();
-  console.log('✅ Statistics working:', {
+  console.log('Statistics working:', {
     maxWorkers: stats.config.maxWorkers,
     activeTasks: stats.activeTasks
   });
 
   // Test health monitoring
   const health = tasklets.getHealth();
-  console.log('✅ Health monitoring working:', {
+  console.log('Health monitoring working:', {
     status: health.status,
     workers: health.workers,
     memory: health.memoryUsagePercent
@@ -82,28 +82,28 @@ async function testTypeScriptAPI() {
 
   // Test automation features
   tasklets.enableAdaptiveMode();
-  console.log('✅ Adaptive mode working');
+  console.log('Adaptive mode working');
 
   // Test workload optimization
   tasklets.setWorkloadType('cpu');
-  console.log('✅ Workload optimization working');
+  console.log('Workload optimization working');
 
   // Test shutdown
   await tasklets.shutdown();
-  console.log('✅ Shutdown working');
+  console.log('Shutdown working');
 
-  console.log('🎉 All TypeScript API tests passed!');
+  console.log('All TypeScript API tests passed!');
 }
 
 // Test class instantiation
 function testClassInstantiation() {
-  console.log('🧪 Testing class instantiation...');
+  console.log('Testing class instantiation...');
 
   const taskletsInstance = new Tasklets();
 
   // Test instance methods
   taskletsInstance.configure(config);
-  console.log('✅ Class instantiation working');
+  console.log('Class instantiation working');
 
   return taskletsInstance;
 }
@@ -111,7 +111,7 @@ function testClassInstantiation() {
 // Run all tests
 async function runAllTests() {
   try {
-    console.log('🚀 Starting TypeScript compatibility tests...\n');
+    console.log('Starting TypeScript compatibility tests...\n');
 
     // Test class instantiation
     testClassInstantiation();
@@ -121,10 +121,10 @@ async function runAllTests() {
     await testTypeScriptAPI();
     console.log('');
 
-    console.log('🎉 All TypeScript compatibility tests completed successfully!');
+    console.log('All TypeScript compatibility tests completed successfully!');
 
   } catch (error) {
-    console.error('❌ TypeScript compatibility test failed:', error);
+    console.error('TypeScript compatibility test failed:', error);
     process.exit(1);
   }
 }

@@ -45,9 +45,9 @@ async function runMetricsExample() {
     console.log('   System Memory Usage:', health.memoryUsagePercent.toFixed(1), '%');
 
     if (health.memoryUsagePercent > 90) {
-        console.log('   ⚠️ WARNING: High memory usage detected!');
+        console.log('   WARNING: High memory usage detected!');
     } else {
-        console.log('   ✅ System resources are stable.');
+        console.log('   System resources are stable.');
     }
 
     // 4. Resource Cleanup Verification
@@ -58,7 +58,7 @@ async function runMetricsExample() {
     console.log('   Total Active Tasks after shutdown:', finalStats.activeTasks);
     console.log('   Total Workers after shutdown:', finalStats.totalWorkers);
 
-    console.log('\n🎉 Example finished.');
+    console.log('\nExample finished.');
 }
 
 runMetricsExample().catch(console.error);
