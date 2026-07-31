@@ -19,6 +19,10 @@ No lint, no format, no typecheck configured.
 
 - **Singleton proxy pattern**: `require('@wendelmax/tasklets')` exports the `Tasklets` class. Static methods (`Tasklets.run()`, etc.) operate on a hidden default instance. `new Tasklets(config)` creates an independent pool.
 - **Fast Path**: task dispatches immediately when a worker is idle; only queues when all workers busy.
+- **O(1) idle worker lookup**: idle workers tracked in a Set — no linear scan.
+- **WeakMap worker resolution**: message handler resolves worker objects by thread reference.
+- **Ring-buffer queue**: tasks dequeued via offset increment, not `Array.shift()`.
+- **Function string cache**: `WeakMap` avoids repeated `toString()` for reused function objects.
 - **Secret auth**: every instance generates a random 32-byte hex token. Workers validate every message against it. Not configurable.
 - **`MODULE:` prefix**: pass a string `'MODULE:/path/to/module'` to `require()` inside a worker. An `allowedModules` config option can restrict which paths are permitted.
 - **Memory safety** (built-in, even with `maxMemory: 0`): free RAM < 5% → cap pool to 1 worker; < 15% → cap to 70% of configured max.
@@ -37,7 +41,7 @@ No lint, no format, no typecheck configured.
 
 ## Key constraints
 
-- Node `>=22.0.0`
+- Node `>=22.0.0` (v3.x baseline)
 - No runtime dependencies (dev-only: jest, ts-node, typescript, benchmark)
 - Worker tasks are stringified functions deserialized via `new Function()` — must be self-contained (closures do not cross the thread boundary)
 - BigInt and Symbol return values are explicitly rejected (throws before serialization)
