@@ -185,8 +185,8 @@ console.log(`Inserted ${count} items`);
 
 | Approach | `require()` | Closures | Best For |
 |----------|------------|----------|----------|
-| Direct function | ❌ | ❌ | CPU-bound (math, parsing) |
-| `MODULE:` prefix | ✅ | ❌ | I/O-bound (database, network) |
+| Direct function | No | No | CPU-bound (math, parsing) |
+| `MODULE:` prefix | Yes | No | I/O-bound (database, network) |
 
 ---
 
@@ -198,11 +198,11 @@ Tasklets validates arguments before sending them to workers. The following types
 - **Symbols** — not supported by the Structured Clone Algorithm
 
 ```javascript
-// ❌ This will throw an error
+// This will throw an error
 await tasklets.run(myTask, () => 'callback');
 // Error: "Argument at index 0 is a function..."
 
-// ✅ Pass plain data instead
+// Pass plain data instead
 await tasklets.run(myTask, { key: 'value' }, [1, 2, 3]);
 ```
 
@@ -220,7 +220,7 @@ class UserService {
 
 const svc = new UserService(db);
 
-// ❌ svc is cloned as a plain object – methods are lost inside the worker
+// svc is cloned as a plain object – methods are lost inside the worker
 await tasklets.run((service) => {
     service.getUser(1); // TypeError: service.getUser is not a function
 }, svc);
@@ -231,7 +231,7 @@ await tasklets.run((service) => {
 Extract the serializable data your task actually needs and pass it as plain arguments:
 
 ```javascript
-// ✅ Pass only what the worker needs as plain values
+// Pass only what the worker needs as plain values
 await tasklets.run((userId) => {
     // self-contained CPU work on the id
     return userId * 2;
@@ -290,10 +290,10 @@ tasklets.configure({
     allowedModules: [path.join(__dirname, 'workers')] 
 });
 
-// ✅ Allowed
+// Allowed
 await tasklets.run(`MODULE:${path.join(__dirname, 'workers/db.js')}`);
 
-// ❌ Throws Security Error
+// Throws Security Error
 await tasklets.run(`MODULE:/etc/passwd`);
 ```
 

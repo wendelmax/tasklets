@@ -48,7 +48,7 @@ async function runAdaptiveExample() {
     });
 
     const duration = Date.now() - startTime;
-    console.log(`\n✅ Burst completed in ${duration}ms`);
+    console.log(`\nBurst completed in ${duration}ms`);
 
     // 4. Switching to I/O-intensive optimization
     console.log('\n4. Switching to I/O-intensive workload...');
@@ -57,7 +57,7 @@ async function runAdaptiveExample() {
     // 5. Cleanup
     console.log('\n5. Shutting down pool...');
     await tasklets.shutdown();
-    console.log('🎉 Example finished.');
+    console.log('Example finished.');
 }
 
 runAdaptiveExample().catch(console.error);
