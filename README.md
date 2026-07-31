@@ -311,25 +311,31 @@ For three-way comparisons (blocking vs raw workers vs Tasklets), see:
 
 ## Architecture
 
+The `Tasklets` pool runs on the main thread. Workers are Node.js `Worker` threads.
+
 ```
-main thread                    worker thread
-┌─────────────────┐           ┌──────────────────┐
-│  Tasklets pool  │  postMessage(task, args)    │
-│  ┌───────────┐  │ ──────────→  │  authenticate │
-│  │ idleWorkers│  │           │  deserialize   │
-│  │ (Set)      │  │           │  execute fn    │
-│  │ workerMap  │  │ ←──────────  postMessage   │
-│  │ (WeakMap)  │  │  { result/error, taskId }  │
-│  │ fnCache    │  │           └──────────────────┘
-│  │ queue      │  │
-│  │ metrics    │  │
-│  └───────────┘  │
-└─────────────────┘
+main thread                          worker thread
+──────────                          ──────────────
+Tasklets.run(fn, ...args)
+  │
+  ├─ idle worker ready? ──Yes──→    authenticate
+  │   (Set lookup, O(1))            deserialize fn
+  │                                 execute fn(...args)
+  │    ←────────────────────────    postMessage(result)
+  │
+  └─ all busy? ──Yes──→ queue
+      (ring buffer, O(1))           dispatch when a worker frees
 ```
 
-- **Fast Path**: idle worker available → dispatch immediately
-- **Slow Path**: all workers busy → enqueue, dispatch when one frees
-- **Secret auth**: every instance generates a 32-byte hex token; workers validate every message
+**Internal data structures** (main thread):
+- `idleWorkers` (Set) — O(1) idle worker lookup, no linear scan
+- `workerMap` (WeakMap) — resolves worker objects by thread reference
+- `fnCache` (WeakMap) — caches stringified functions for reused objects
+- `taskQueue` (array with offset pointer) — ring-buffer behavior, no `shift()` reindexing
+
+- **Fast Path**: dispatch immediately when a worker is idle (no queuing)
+- **Slow Path**: enqueue when all workers busy, dispatch as soon as one frees
+- **Secret auth**: every instance generates a random 32-byte hex token; workers validate every message
 
 ---
 
